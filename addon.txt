@@ -1,0 +1,6 @@
+"AddonInfo"
+{
+  "name" "Prop Cannon Tool"
+  "author_name" "DVD"
+  "info" "Creates a cannon that shoots props"
+}
