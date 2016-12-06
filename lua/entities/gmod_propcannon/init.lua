@@ -38,13 +38,15 @@ end
 ENT.fireForce       = 20000
 ENT.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
 ENT.fireModel       = "models/props_junk/cinderblock01a.mdl"
-ENT.recoilAmount    = 1
+ENT.recoilAmount    = 0
 ENT.fireDelay       = 5
 ENT.killDelay       = 5
 ENT.explosivePower  = 10
 ENT.explosiveRadius = 200
 ENT.fireEffect      = "Explosion"
 ENT.fireExplosives  = true
+ENT.fireMass        = 120 -- Mass with optimal distance for projectile
+ENT.fireDirection   = Vector(0,0,1) -- Default UP
 
 function ENT:Setup(fireForce     , cannonModel    , fireModel ,
                    recoilAmount  , fireDelay      , killDelay ,
@@ -60,18 +62,18 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
   self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0,0,500)
   self.fireEffect      = tostring(fireEffect or "")
   self.fireExplosives  = tobool(fireExplosives)
-  self.fireDirection   = Vector(); self.fireDirection:Set(fireDirection)
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0,1,50000)
+  self.fireDirection:Set(fireDirection)
   if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
   else self.fireDirection.z = 1 end -- Make sure length equal to 1
   self:SetOverlayText("- Prop Cannon -"..
-                      "\nFiring Force    : "..RoundValue(self.fireForce,0.01)..
-                      "\nFiring Direction: "..RoundValue(tostring(self.fireDirection),0.01)..
-                      "\nFiring Delay    : "..RoundValue(self.fireDelay,0.01)..
-                      "\nExplosive Area  : "..RoundValue(self.explosiveRadius,0.01)..
+                      "\nFiring Force    : "..pcnRoundValue(self.fireForce,0.01)..
+                      "\nFiring Direction: "..pcnRoundValue(tostring(self.fireDirection),0.01)..
+                      "\nFiring Delay    : "..pcnRoundValue(self.fireDelay,0.01)..
+                      "\nExplosive Area  : "..pcnRoundValue(self.explosiveRadius,0.01)..
                       "\nBullet Model    : "..self.fireModel..
-                      "\nBullet Weight   : "..RoundValue(self.fireMass)..
-                      "\nExplosive Power("..(fireExplosives and "On " or "Off")"): "..RoundValue(explosivePower,0.01))
+                      "\nBullet Weight   : "..pcnRoundValue(self.fireMass)..
+                      "\nExplosive Power("..(self.fireExplosives and "On " or "Off")"): "..pcnRoundValue(explosivePower,0.01))
 end
 
 function self:GetFireDirection()
@@ -79,23 +81,21 @@ function self:GetFireDirection()
         wdir:Rotate(self:GetAngles()); return wdir
 end
 
-function ENT:OnTakeDamage( dmginfo)
+function ENT:OnTakeDamage(dmginfo)
+  self:Print("ENT.OnTakeDamage: TakePhysicsDamage Start")
   self:TakePhysicsDamage(dmginfo)
+  self:Print("ENT.OnTakeDamage: TakePhysicsDamage Success")
 end
 
 function ENT:FireEnable()
-  self.enabled = true
+  self.enabled  = true
   self.nextFire = CurTime()
-  if (WireLib) then
-    WireLib.TriggerOutput(self, "AutoFiring", 1)
-  end
+  if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 1) end
 end
 
 function ENT:FireDisable()
   self.enabled = false
-  if (WireLib) then
-    WireLib.TriggerOutput(self, "AutoFiring", 0)
-  end
+  if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 0) end
 end
 
 function ENT:CanFire()
@@ -112,68 +112,93 @@ function ENT:Think()
 end
 
 function ENT:FireOne()
-  self.nextFire = CurTime() + self.fireDelay
-  local pos = self:GetPos()
-  if (self.fireEffect ~= "" and self.fireEffect ~= "none") then
+  self.nextFire = (CurTime() + self.fireDelay)
+  local pos = self:LocalToWorld(self:OBBCenter())
+  local dir = self:GetFireDirection()
+  if(self.fireEffect ~= "" and self.fireEffect ~= "none") then
+    self:Print("ENT.FireOne: Effect", self.fireEffect)
     local effectData = EffectData()
+    self:Print("ENT.FireOne: Alloc data", self.fireEffect)
     effectData:SetOrigin(pos)
     effectData:SetStart(pos)
     effectData:SetScale(1)
+    self:Print("ENT.FireOne: Alloc setup", self.fireEffect)
     util.Effect(self.fireEffect, effectData)
-  end
+    self:Print("ENT.FireOne: Setup effect", self.fireEffect)
+  end; self:Print("ENT.FireOne: Setup effects success", self.fireEffect)
   local ent = ents.Create("cannon_prop")
   if(not (ent and ent:IsValid())) then
-    error("Could not create cannon_prop for firing!") end
-  ent:SetPos(pos)
+    self:Print("ENT.FireOne: Cannot create projectile !"); return nil end
+  self:Print("ENT.FireOne: Projectile crteated", ent)
+  self:DeleteOnRemove(ent)
+  ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
   ent:SetModel(self.fireModel)
   ent:SetAngles(self:GetAngles())
   ent:SetOwner(self) -- For collision and such.
   ent.Owner = self:GetPlayer() -- For kill crediting
   if (self.fireExplosives) then
     ent.explosive       = true
+    ent.exploded        = false
     ent.explosiveRadius = self.explosiveRadius
     ent.explosivePower  = self.explosivePower
-  end
-  if (self.killDelay > 0) then
+  end; self:Print("ENT.FireOne: Explosive projectile", self.fireExplosives)
+  if(self.killDelay > 0) then
     ent.dietime = CurTime() + self.killDelay end
-  ent:Spawn()
-  self:DeleteOnRemove(ent)
+  self:Print("ENT.FireOne: Kill delay", self.killDelay, ent.dietime)
+  ent:Spawn(); self:Print("ENT.FireOne: Spawn projectile")
   local iPhys = self:GetPhysicsObject()
   local uPhys =  ent:GetPhysicsObject()
-  local fidir = self:GetFireDirection()
-  if(iPhys and iPhys:IsValid()) then -- The cannon could conceivably work without a valid physics model.
-    iPhys:ApplyForceCenter(fidir * -self.fireForce * self.recoilAmount) end -- Recoil
+  self:Print("ENT.FireOne: Get settings success")
+  if(iPhys and iPhys:IsValid()) then
+    reco = dir * -self.fireForce * self.recoilAmount
+    self:Print("ENT.FireOne: Recoil", iPhys, reco)
+    iPhys:ApplyForceCenter(reco)
+  end -- Recoil. The cannon could conceivably work without a valid physics model.
+  self:Print("ENT.FireOne: Recoil Success")
   if (not (uPhys and uPhys:IsValid())) then -- The bullets can't though
-    error("Invalid physics for model '" .. self.fireModel .. "' !!") end
+    self:Print("ENT.FireOne: Invalid physics for projectile", iPhys, ent) return nil end
+  self:Print("ENT.FireOne: Setup projectile launch")
   uPhys:SetMass(self.fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
-  uPhys:ApplyForceCenter(fidir * self.fireForce) -- Fire it off infront of us
+  uPhys:ApplyForceCenter(dir * self.fireForce) -- Fire it off infront of us
+  self:Print("ENT.FireOne: Launch projectile")
   if (WireLib) then
     WireLib.TriggerOutput(self, "Fired", 1)
     WireLib.TriggerOutput(self, "LastBullet", ent)
     WireLib.TriggerOutput(self, "Fired", 0)
-  end
+  end; self:Print("ENT.FireOne: Success")
 end
 
 function ENT:TriggerInput(key, value)
-  if (key == "FireOnce" and value ~= 0) then
+  if(key == "FireOnce" and value ~= 0) then
+    self:Print("ENT.TriggerInput: FireOne Start")
     self:FireOne()
+    self:Print("ENT.TriggerInput: FireOne Success")
   elseif (key == "AutoFire") then
-    if (value == 0) then
+    if(value == 0) then
+      self:Print("ENT.TriggerInput: FireDisable Start")
       self:FireDisable()
-    else self:FireEnable() end
+      self:Print("ENT.TriggerInput: FireDisable Success")
+    else
+      self:Print("ENT.TriggerInput: FireEnable Start")
+      self:FireEnable()
+      self:Print("ENT.TriggerInput: FireEnable Success")
+    end
   end
 end
 
-
-local function On( ply, ent )
+local function On(ply, ent )
   if(not (ent and ent:IsValid())) then return end
+  self:Print("ENT.On: Start")
   ent:FireEnable()
+  self:Print("ENT.On: Success")
 end
 
 local function Off( pl, ent )
   if(not (ent and ent:IsValid())) then return end
+  self:Print("ENT.Off: Start")
   ent:FireDisable()
+  self:Print("ENT.Off: Success")
 end
 
 numpad.Register( "propcannon_On",  On )
