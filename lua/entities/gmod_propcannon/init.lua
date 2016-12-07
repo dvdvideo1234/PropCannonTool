@@ -52,6 +52,7 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
                    recoilAmount  , fireDelay      , killDelay ,
                    explosivePower, explosiveRadius, fireEffect,
                    fireExplosives, fireDirection  , fireMass)
+  self:Print("ENT.Setup: Start")
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, )
   self.cannonModel     = tostring(cannonModel or ""); self:SetModel(self.cannonModel)
   self.fireModel       = tostring(fireModel or "")
@@ -68,17 +69,21 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
   else self.fireDirection.z = 1 end -- Make sure length equal to 1
   self:SetOverlayText("- Prop Cannon -"..
                       "\nFiring Force    : "..pcnRoundValue(self.fireForce,0.01)..
+                      "\nFiring Effect   : "..self.fireEffect..
                       "\nFiring Direction: "..pcnRoundValue(tostring(self.fireDirection),0.01)..
                       "\nFiring Delay    : "..pcnRoundValue(self.fireDelay,0.01)..
                       "\nExplosive Area  : "..pcnRoundValue(self.explosiveRadius,0.01)..
                       "\nBullet Model    : "..self.fireModel..
                       "\nBullet Weight   : "..pcnRoundValue(self.fireMass)..
                       "\nExplosive Power("..(self.fireExplosives and "On " or "Off")"): "..pcnRoundValue(explosivePower,0.01))
+  self:Print("ENT.Setup: Success")
 end
 
 function self:GetFireDirection()
+  self:Print("ENT.GetFireDirection: Start")
   local wdir = Vector(); wdir:Set(self.fireDirection)
         wdir:Rotate(self:GetAngles()); return wdir
+  self:Print("ENT.GetFireDirection: Success")
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -88,18 +93,24 @@ function ENT:OnTakeDamage(dmginfo)
 end
 
 function ENT:FireEnable()
+  self:Print("ENT.FireEnable: Start")
   self.enabled  = true
   self.nextFire = CurTime()
   if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 1) end
+  self:Print("ENT.FireEnable: Success")
 end
 
 function ENT:FireDisable()
+  self:Print("ENT.FireDisable: Start")
   self.enabled = false
   if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 0) end
+  self:Print("ENT.FireDisable: Success")
 end
 
 function ENT:CanFire()
+  self:Print("ENT.CanFire: Start")
   return self.nextFire <= CurTime()
+  self:Print("ENT.CanFire: Success")
 end
 
 function ENT:Think()
@@ -112,6 +123,7 @@ function ENT:Think()
 end
 
 function ENT:FireOne()
+  self:Print("ENT.FireOne: Start")
   self.nextFire = (CurTime() + self.fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
   local dir = self:GetFireDirection()
@@ -136,7 +148,7 @@ function ENT:FireOne()
   ent:SetAngles(self:GetAngles())
   ent:SetOwner(self) -- For collision and such.
   ent.Owner = self:GetPlayer() -- For kill crediting
-  if (self.fireExplosives) then
+  if(self.fireExplosives) then
     ent.explosive       = true
     ent.exploded        = false
     ent.explosiveRadius = self.explosiveRadius
@@ -170,6 +182,7 @@ function ENT:FireOne()
 end
 
 function ENT:TriggerInput(key, value)
+  self:Print("ENT.TriggerInput: Start")
   if(key == "FireOnce" and value ~= 0) then
     self:Print("ENT.TriggerInput: FireOne Start")
     self:FireOne()
@@ -184,21 +197,21 @@ function ENT:TriggerInput(key, value)
       self:FireEnable()
       self:Print("ENT.TriggerInput: FireEnable Success")
     end
-  end
+  end; self:Print("ENT.TriggerInput: Success")
 end
 
 local function On(ply, ent )
   if(not (ent and ent:IsValid())) then return end
-  self:Print("ENT.On: Start")
+  ent:Print("ENT.On: Start")
   ent:FireEnable()
-  self:Print("ENT.On: Success")
+  ent:Print("ENT.On: Success")
 end
 
 local function Off( pl, ent )
   if(not (ent and ent:IsValid())) then return end
-  self:Print("ENT.Off: Start")
+  ent:Print("ENT.Off: Start")
   ent:FireDisable()
-  self:Print("ENT.Off: Success")
+  ent:Print("ENT.Off: Success")
 end
 
 numpad.Register( "propcannon_On",  On )

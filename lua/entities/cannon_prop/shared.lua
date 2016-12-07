@@ -23,7 +23,7 @@ function ENT:Print(...)
     local tData, nID, {...}, 1
     while(tData[nID]) do
       sLin, nID = sLin..sDel..tostring(tData[nID]), (nID + 1)
-    end; file.Append(pcnPrefx.."/".."system_log.txt", sLin.."\n")
+    end; file.Append("prop_cannon_tool/system_log.txt", sLin.."\n")
   else print(sLin,...) end
 end
 
@@ -51,7 +51,7 @@ end
 
 hook.Add("EntityTakeDamage", "cannon_prop kill crediting",
   function(ent, me, attack, amt, info)
-    self:Print("EntityTakeDamage: Call",ent, me, attack, amt, info)
+    self:Print("EntityTakeDamage: Call", ent, me, attack, amt, info)
     if(me.ClassName == "cannon_prop") then
       self:Print("EntityTakeDamage: Class")
       info:SetAttacker(me.Owner)

@@ -3,49 +3,7 @@
   ~ lexi ~
 --]]
 
-TOOL.Category = "Entities"
-TOOL.Name     = "#Prop Cannon"
-
-TOOL.ClientConVar = {
-  ["key"]               = 1,
-  ["force"]             = 20000,
-  ["delay"]             = 5,
-  ["recoil"]            = 1,
-  ["explosive"]         = 1,
-  ["kill_delay"]        = 5,
-  ["ammo_model"]        = "models/props_junk/cinderblock01a.mdl",
-  ["ammo_mass"]         = 50,
-  ["fire_effect"]       = "Explosion",
-  ["fire_direct"]       = "0,0,1",
-  ["cannon_model"]      = "models/props_trainstation/trashcan_indoor001b.mdl",
-  ["explosive_power"]   = 10,
-  ["explosive_radius"]  = 200
-}
-
 cleanup.Register( "propcannons" )
-
-list.Set("CannonModels","models/dav0r/thruster.mdl",{})
-list.Set("CannonModels","models/props_junk/wood_crate001a.mdl",{})
-list.Set("CannonModels","models/props_junk/metalbucket01a.mdl",{})
-list.Set("CannonModels","models/props_trainstation/trashcan_indoor001b.mdl",{})
-list.Set("CannonModels","models/props_junk/trafficcone001a.mdl",{})
-list.Set("CannonModels","models/props_c17/oildrum001.mdl",{})
-list.Set("CannonModels","models/props_c17/canister01a.mdl",{})
-list.Set("CannonModels","models/props_c17/lampshade001a.mdl",{})
-
-list.Set("CannonAmmoModels","models/props_junk/propane_tank001a.mdl",{})
-list.Set("CannonAmmoModels","models/props_c17/canister_propane01a.mdl",{})
-list.Set("CannonAmmoModels","models/props_junk/watermelon01.mdl",{})
-list.Set("CannonAmmoModels","models/props_junk/cinderblock01a.mdl",{})
-list.Set("CannonAmmoModels","models/props_debris/concrete_cynderblock001.mdl",{})
-list.Set("CannonAmmoModels","models/props_junk/popcan01a.mdl",{})
-
-list.Set("CannonEffects", "Explosion",  {propcannon_fire_effect = "Explosion"})
-list.Set("CannonEffects", "Sparks",     {propcannon_fire_effect = "cball_explode"})
-list.Set("CannonEffects", "Bomb drop",  {propcannon_fire_effect = "RPGShotDown"})
-list.Set("CannonEffects", "Flash",      {propcannon_fire_effect = "HelicopterMegaBomb"})
-list.Set("CannonEffects", "Machine Gun",{propcannon_fire_effect = "HelicopterImpact"})
-list.Set("CannonEffects", "None",       {propcannon_fire_effect = "none"})
 
 if(SERVER) then
   CreateConVar("sbox_maxpropcannons", 10, "The maximum number of prop cannons you can have out at one time.")
@@ -88,15 +46,59 @@ if(SERVER) then
        "numpadKey"      , "fireForce" , "cannonModel"   , "fireModel"     ,
        "recoilAmount"   , "fireDelay" , "killDelay"     , "explosivePower",
        "explosiveRadius", "fireEffect", "fireExplosives", "fireDirection" , "fireMass")
-else
+elseif(CLIENT)
   language.Add("Tool.propcannon.name" , "Prop Cannon")
   language.Add("Tool.propcannon.desc" , "A movable cannon that can fire props")
   language.Add("Tool.propcannon.0"    , "Click to spawn a cannon. Click on an existing cannon to change it. Right click on a prop to use the model as ammo.")
-  language.Add("SBoxLimit_propcannons", "You've hit the Prop Cannonslimit!")
   language.Add("Undone_propcannon"    , "Undone Prop Cannon")
   language.Add("Cleanup_propcannons"  , "Prop Cannons")
   language.Add("Cleaned_propcannons"  , "Cleaned up all Prop Cannons")
+  language.Add("SBoxLimit_propcannons", "You've hit the Prop Cannons limit!")
+
+  list.Set("CannonModels","models/dav0r/thruster.mdl",{})
+  list.Set("CannonModels","models/props_junk/wood_crate001a.mdl",{})
+  list.Set("CannonModels","models/props_junk/metalbucket01a.mdl",{})
+  list.Set("CannonModels","models/props_trainstation/trashcan_indoor001b.mdl",{})
+  list.Set("CannonModels","models/props_junk/trafficcone001a.mdl",{})
+  list.Set("CannonModels","models/props_c17/oildrum001.mdl",{})
+  list.Set("CannonModels","models/props_c17/canister01a.mdl",{})
+  list.Set("CannonModels","models/props_c17/lampshade001a.mdl",{})
+
+  list.Set("CannonAmmoModels","models/props_junk/propane_tank001a.mdl",{})
+  list.Set("CannonAmmoModels","models/props_c17/canister_propane01a.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/watermelon01.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/cinderblock01a.mdl",{})
+  list.Set("CannonAmmoModels","models/props_debris/concrete_cynderblock001.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/popcan01a.mdl",{})
+
+  list.Set("CannonEffects", "Explosion",  {propcannon_fire_effect = "Explosion"})
+  list.Set("CannonEffects", "Sparks",     {propcannon_fire_effect = "cball_explode"})
+  list.Set("CannonEffects", "Bomb drop",  {propcannon_fire_effect = "RPGShotDown"})
+  list.Set("CannonEffects", "Flash",      {propcannon_fire_effect = "HelicopterMegaBomb"})
+  list.Set("CannonEffects", "Machine Gun",{propcannon_fire_effect = "HelicopterImpact"})
+  list.Set("CannonEffects", "None",       {propcannon_fire_effect = "none"})
+
 end
+
+TOOL.Category = "Entities"
+TOOL.Name     = languageGetPhrase("Tool."..gsToolNameL..".name")
+
+TOOL.ClientConVar = {
+  ["key"]              = 1,
+  ["force"]            = 20000,
+  ["delay"]            = 5,
+  ["recoil"]           = 1,
+  ["explosive"]        = 1,
+  ["kill_delay"]       = 5,
+  ["ammo_model"]       = "models/props_junk/cinderblock01a.mdl",
+  ["ammo_mass"]        = 120,
+  ["fire_effect"]      = "Explosion",
+  ["fire_direct"]      = "0,0,1",
+  ["cannon_model"]     = "models/props_trainstation/trashcan_indoor001b.mdl",
+  ["explosive_power"]  = 10,
+  ["explosive_radius"] = 200
+}
+
 
 function TOOL:LeftClick(tr)
   if(not tr.Hit) then return false end
@@ -104,7 +106,6 @@ function TOOL:LeftClick(tr)
   if(trEnt and trEnt:IsPlayer()) then return false
   elseif(CLIENT) then return true
   elseif(not util.IsValidPhysicsObject(trEnt, tr.PhysicsBone)) then return false end
-
   local ply       = self:GetOwner()
   local key       = self:GetClientNumber("key")
   local force     = self:GetClientNumber("force")
@@ -160,9 +161,9 @@ end
 
 function TOOL:RightClick(tr)
   if(CLIENT) then return true end
-  local trEnt = tr.Entity
-  if(not (tr.Hit and
-         (trEnt  and trEnt:IsValid()) and
+  local trEnt, trHit = tr.Entity, tr.Hit
+  if(not (trHit and
+         (trEnt and trEnt:IsValid()) and
           trEnt:GetClass() == "prop_physics")) then return false end
   local model = trEnt:GetModel()
   if(not util.IsValidModel(model)) then -- you never know
@@ -175,8 +176,8 @@ end
 function TOOL:UpdateGhost(ent, ply) --( ent, player )
   if(not (ent and ent:IsValid())) then return end
   local tr = ply:GetEyeTrace()
-  local trEnt = tr.Entity
-  if(not tr.Hit or
+  local trEnt, trHit = tr.Entity, tr.Hit
+  if(not trHit or
        ((trEnt and trEnt:IsValid()) and
         (trEnt:IsPlayer() or
          trEnt:GetClass() == "gmod_propcannon"))) then
@@ -192,22 +193,25 @@ function TOOL:Think()
   if (SERVER and !game.SinglePlayer()) then return end
   if (CLIENT and  game.SinglePlayer()) then return end
   local model = string.lower(self:GetClientInfo("cannon_model"))
-  if (not (IsValid(self.GhostEntity) and self.GhostEntity:GetModel() == model)) then
-    self:MakeGhostEntity(model, vector_origin, Angle())
-  end; self:UpdateGhost(self.GhostEntity, self:GetOwner())
+  local ghEnt = self.GhostEntity
+  if(not (ghEnt and
+          ghEnt:IsValid() and
+          ghEnt:GetModel() == model)) then
+    self:MakeGhostEntity(model, Vector(), Angle())
+  end; self:UpdateGhost(ghEnt, self:GetOwner())
 end
 
 local ConVarList = TOOL:BuildConVarList()
 function TOOL.BuildCPanel(cp)
-  cp:SetName(languageGetPhrase("Tool.propcannon.name"))
-  cp:Help   (languageGetPhrase("Tool.propcannon.desc"))
+  cp:SetName(language.GetPhrase("Tool.propcannon.name"))
+  cp:Help   (language.GetPhrase("Tool.propcannon.desc"))
 
-  pItem = cp:AddControl( "ComboBox",{
-                        Label      = "#Presets"
-                        MenuButton = 1,
-                        Folder     = "propcannon",
-                        Options    = {["Default"] = ConVarList},
-                        CVars      = table.GetKeys(ConVarList)})
+  cp:AddControl("ComboBox",{
+                 Label      = "#Presets"
+                 MenuButton = 1,
+                 Folder     = "propcannon",
+                 Options    = {["Default"] = ConVarList},
+                 CVars      = table.GetKeys(ConVarList)})
 
   cp:AddControl( "PropSelect", {
     Label = "Cannon Model:",

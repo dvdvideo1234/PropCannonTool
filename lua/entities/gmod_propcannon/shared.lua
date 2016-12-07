@@ -20,7 +20,7 @@ function pcnRoundValue(exact, frac)
   return frac * (q + (f > 0.5 and 1 or 0))
 end
 
-local pcnPrefx   = ENT.PrintName:gsub(" ", ""):lower()
+local pcnPrefx   = ENT.PrintName:gsub(" ", "_"):lower()
 local pcnFvars   = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 local varLogFile = CreateConVar(pcnPrefx.."logfile", "1", pcnFvars, "Enable logging in a file")
 local varLogUsed = CreateConVar(pcnPrefx.."logused", "1", pcnFvars, "Enable logging on error")
@@ -32,6 +32,6 @@ function ENT:Print(...)
     local tData, nID, {...}, 1
     while(tData[nID]) do
       sLin, nID = sLin..sDel..tostring(tData[nID]), (nID + 1)
-    end; file.Append(pcnPrefx.."/".."system_log.txt", sLin.."\n")
+    end; file.Append("prop_cannon_tool/system_log.txt", sLin.."\n")
   else print(sLin,...) end
 end
