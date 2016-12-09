@@ -11,7 +11,7 @@ ENT.Contact        = "lexi@lexi.org.uk"   -- Email dvd_video@abv.bg
 ENT.Spawnable      = false
 ENT.AdminSpawnable = false
 
-local pcnPrefx   = ENT.PrintName:gsub(" ", ""):lower()
+local pcnPrefx   = ENT.PrintName:gsub(" ", "_"):lower()
 local pcnFvars   = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 local varLogFile = CreateConVar(pcnPrefx.."logfile", "1", pcnFvars, "Enable logging in a file")
 local varLogUsed = CreateConVar(pcnPrefx.."logused", "1", pcnFvars, "Enable logging on error")

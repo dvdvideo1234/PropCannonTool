@@ -3,10 +3,10 @@
   ~ lexi ~
 --]]
 
-cleanup.Register( "propcannons" )
+cleanup.Register("propcannons")
 
 if(SERVER) then
-  CreateConVar("sbox_maxpropcannons", 10, "The maximum number of prop cannons you can have out at one time.")
+  CreateConVar("sbox_maxpropcannons", 10, "The maximum number of prop cannon guns you can have out at one time.")
 
   function getFireDirection(dir)
     local bodir = string.Explode(",",dir)
@@ -22,11 +22,11 @@ if(SERVER) then
     numpad.Remove(up)
   end
 
-  function MakeCannon(ply, pos, angles, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+  function MakeCannon(ply, pos, ang, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     if (not ply:CheckLimit("propcannons")) then return false end
     local eCannon = ents.Create( "gmod_propcannon" )
     eCannon:SetPos(pos)
-    eCannon:SetAngles(angles)
+    eCannon:SetAngles(ang)
     eCannon:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     eCannon:Spawn()
     eCannon:SetPlayer(ply)
@@ -77,7 +77,6 @@ elseif(CLIENT)
   list.Set("CannonEffects", "Flash",      {propcannon_fire_effect = "HelicopterMegaBomb"})
   list.Set("CannonEffects", "Machine Gun",{propcannon_fire_effect = "HelicopterImpact"})
   list.Set("CannonEffects", "None",       {propcannon_fire_effect = "none"})
-
 end
 
 TOOL.Category = "Entities"
@@ -98,7 +97,6 @@ TOOL.ClientConVar = {
   ["explosive_power"]  = 10,
   ["explosive_radius"] = 200
 }
-
 
 function TOOL:LeftClick(tr)
   if(not tr.Hit) then return false end
@@ -133,10 +131,10 @@ function TOOL:LeftClick(tr)
     return true
   end
 
-  local angles = tr.HitNormal:Angle()
-  angles.pitch = angles.pitch + 90
+  local ang = tr.HitNormal:Angle()
+        ang.pitch = ang.pitch + 90
 
-  local eCannon = MakeCannon(ply, tr.HitPos, angles, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+  local eCannon = MakeCannon(ply, tr.HitPos, ang, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
   if(not eCannon) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
