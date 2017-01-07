@@ -46,7 +46,9 @@ if(SERVER) then
        "numpadKey"      , "fireForce" , "cannonModel"   , "fireModel"     ,
        "recoilAmount"   , "fireDelay" , "killDelay"     , "explosivePower",
        "explosiveRadius", "fireEffect", "fireExplosives", "fireDirection" , "fireMass")
-elseif(CLIENT)
+
+elseif(CLIENT) then
+
   language.Add("Tool.propcannon.name" , "Prop Cannon")
   language.Add("Tool.propcannon.desc" , "A movable cannon that can fire props")
   language.Add("Tool.propcannon.0"    , "Click to spawn a cannon. Click on an existing cannon to change it. Right click on a prop to use the model as ammo.")
@@ -77,13 +79,14 @@ elseif(CLIENT)
   list.Set("CannonEffects", "Flash",      {propcannon_fire_effect = "HelicopterMegaBomb"})
   list.Set("CannonEffects", "Machine Gun",{propcannon_fire_effect = "HelicopterImpact"})
   list.Set("CannonEffects", "None",       {propcannon_fire_effect = "none"})
+
+  TOOL.Category = "Entities"
+  TOOL.Name     = language.GetPhrase("Tool.propcannon.name")
+
 end
 
-TOOL.Category = "Entities"
-TOOL.Name     = languageGetPhrase("Tool."..gsToolNameL..".name")
-
 TOOL.ClientConVar = {
-  ["key"]              = 1,
+  ["key"]              = 42,
   ["force"]            = 20000,
   ["delay"]            = 5,
   ["recoil"]           = 1,
@@ -124,10 +127,10 @@ function TOOL:LeftClick(tr)
           util.IsValidModel(ammo)  and
           util.IsValidProp (ammo))) then return false end
 
-  if(trEnt and trEnt:IsValid()) and
-      trEnt:GetClass()  == "gmod_propcannon" and
-      trEnt:GetPlayer() == ply) then -- Do not update other ppl stuff
-    trEnt:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+  if(trEnt and trEnt:IsValid() and
+     trEnt:GetClass()  == "gmod_propcannon" and
+     trEnt:GetPlayer() == ply) then -- Do not update other ppl stuff
+     trEnt:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     return true
   end
 
@@ -205,7 +208,7 @@ function TOOL.BuildCPanel(cp)
   cp:Help   (language.GetPhrase("Tool.propcannon.desc"))
 
   cp:AddControl("ComboBox",{
-                 Label      = "#Presets"
+                 Label      = "#Presets",
                  MenuButton = 1,
                  Folder     = "propcannon",
                  Options    = {["Default"] = ConVarList},
@@ -228,7 +231,7 @@ function TOOL.BuildCPanel(cp)
     Description = "How much force the cannon fires with",
     Type = "float",
     Min = "0",
-    Max = "100000",
+    Max = "500000",
     Command = "propcannon_force"
   })
     cp:AddControl( "Slider", {

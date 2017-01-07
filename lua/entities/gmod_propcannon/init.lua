@@ -35,7 +35,7 @@ function ENT:Initialize()
   end
 end
 
-ENT.fireForce       = 20000
+ENT.fireForce       = 40000
 ENT.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
 ENT.fireModel       = "models/props_junk/cinderblock01a.mdl"
 ENT.recoilAmount    = 0
@@ -53,7 +53,7 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
                    explosivePower, explosiveRadius, fireEffect,
                    fireExplosives, fireDirection  , fireMass)
   self:Print("ENT.Setup: Start")
-  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, )
+  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, 500000)
   self.cannonModel     = tostring(cannonModel or ""); self:SetModel(self.cannonModel)
   self.fireModel       = tostring(fireModel or "")
   self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0,0,10)
@@ -70,20 +70,23 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
   self:SetOverlayText("- Prop Cannon -"..
                       "\nFiring Force    : "..pcnRoundValue(self.fireForce,0.01)..
                       "\nFiring Effect   : "..self.fireEffect..
-                      "\nFiring Direction: "..pcnRoundValue(tostring(self.fireDirection),0.01)..
-                      "\nFiring Delay    : "..pcnRoundValue(self.fireDelay,0.01)..
+                      "\nFiring Direction: "..pcnRoundValue(self.fireDirection.x,0.01)..", "..
+                                              pcnRoundValue(self.fireDirection.y,0.01)..", "..
+                                              pcnRoundValue(self.fireDirection.z,0.01)..
+                      "\nFiring Delay    : "..pcnRoundValue(self.fireDelay      ,0.01)..
                       "\nExplosive Area  : "..pcnRoundValue(self.explosiveRadius,0.01)..
                       "\nBullet Model    : "..self.fireModel..
-                      "\nBullet Weight   : "..pcnRoundValue(self.fireMass)..
-                      "\nExplosive Power("..(self.fireExplosives and "On " or "Off")"): "..pcnRoundValue(explosivePower,0.01))
+                      "\nBullet Weight   : "..pcnRoundValue(self.fireMass,0.01)..
+                      "\nExplosive Power("..(self.fireExplosives and "On " or "Off").."): "..pcnRoundValue(self.explosivePower,0.01))
   self:Print("ENT.Setup: Success")
 end
 
-function self:GetFireDirection()
+function ENT:GetFireDirection()
   self:Print("ENT.GetFireDirection: Start")
   local wdir = Vector(); wdir:Set(self.fireDirection)
-        wdir:Rotate(self:GetAngles()); return wdir
+        wdir:Rotate(self:GetAngles())
   self:Print("ENT.GetFireDirection: Success")
+  return wdir
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -108,9 +111,8 @@ function ENT:FireDisable()
 end
 
 function ENT:CanFire()
-  self:Print("ENT.CanFire: Start")
+  self:Print("ENT.CanFire: Start/Success")
   return self.nextFire <= CurTime()
-  self:Print("ENT.CanFire: Success")
 end
 
 function ENT:Think()
@@ -124,13 +126,17 @@ end
 
 function ENT:FireOne()
   self:Print("ENT.FireOne: Start")
+  if(not self:CanFire()) then return end
+  self:Print("ENT.FireOne: Can fire !")
   self.nextFire = (CurTime() + self.fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
   local dir = self:GetFireDirection()
   if(self.fireEffect ~= "" and self.fireEffect ~= "none") then
     self:Print("ENT.FireOne: Effect", self.fireEffect)
-    local effectData = EffectData()
-    self:Print("ENT.FireOne: Alloc data", self.fireEffect)
+    if(not self.effectDataClass) then
+      self:Print("ENT.FireOne: Alloc data", self.fireEffect)
+      self.effectDataClass = EffectData()
+    end; local effectData = self.effectDataClass   
     effectData:SetOrigin(pos)
     effectData:SetStart(pos)
     effectData:SetScale(1)
