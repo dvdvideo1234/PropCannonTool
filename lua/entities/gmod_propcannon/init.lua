@@ -2,9 +2,8 @@
   ~ Prop Cannon (server) ~
   ~ Lexi ~
 --]]
-AddCSLuaFile( "cl_init.lua" )
-AddCSLuaFile( "shared.lua" )
-include('shared.lua')
+AddCSLuaFile("shared.lua")
+include("shared.lua")
 
 function ENT:Initialize()
   self:PhysicsInit(SOLID_VPHYSICS)
@@ -67,6 +66,7 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
   else self.fireDirection.z = 1 end -- Make sure length equal to 1
+  self.effectDataClass = EffectData() -- Allocate effect data class
   self:SetOverlayText("- Prop Cannon -"..
                       "\nFiring Force    : "..pcnRoundValue(self.fireForce,0.01)..
                       "\nFiring Effect   : "..self.fireEffect..
@@ -82,36 +82,27 @@ function ENT:Setup(fireForce     , cannonModel    , fireModel ,
 end
 
 function ENT:GetFireDirection()
-  self:Print("ENT.GetFireDirection: Start")
   local wdir = Vector(); wdir:Set(self.fireDirection)
         wdir:Rotate(self:GetAngles())
-  self:Print("ENT.GetFireDirection: Success")
   return wdir
 end
 
 function ENT:OnTakeDamage(dmginfo)
-  self:Print("ENT.OnTakeDamage: TakePhysicsDamage Start")
   self:TakePhysicsDamage(dmginfo)
-  self:Print("ENT.OnTakeDamage: TakePhysicsDamage Success")
 end
 
 function ENT:FireEnable()
-  self:Print("ENT.FireEnable: Start")
   self.enabled  = true
   self.nextFire = CurTime()
   if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 1) end
-  self:Print("ENT.FireEnable: Success")
 end
 
 function ENT:FireDisable()
-  self:Print("ENT.FireDisable: Start")
   self.enabled = false
   if (WireLib) then WireLib.TriggerOutput(self, "AutoFiring", 0) end
-  self:Print("ENT.FireDisable: Success")
 end
 
 function ENT:CanFire()
-  self:Print("ENT.CanFire: Start/Success")
   return self.nextFire <= CurTime()
 end
 
@@ -125,29 +116,22 @@ function ENT:Think()
 end
 
 function ENT:FireOne()
-  self:Print("ENT.FireOne: Start")
   if(not self:CanFire()) then return end
-  self:Print("ENT.FireOne: Can fire !")
   self.nextFire = (CurTime() + self.fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
   local dir = self:GetFireDirection()
+  local eff = self.effectDataClass
+
   if(self.fireEffect ~= "" and self.fireEffect ~= "none") then
-    self:Print("ENT.FireOne: Effect", self.fireEffect)
-    if(not self.effectDataClass) then
-      self:Print("ENT.FireOne: Alloc data", self.fireEffect)
-      self.effectDataClass = EffectData()
-    end; local effectData = self.effectDataClass   
-    effectData:SetOrigin(pos)
-    effectData:SetStart(pos)
-    effectData:SetScale(1)
-    self:Print("ENT.FireOne: Alloc setup", self.fireEffect)
-    util.Effect(self.fireEffect, effectData)
-    self:Print("ENT.FireOne: Setup effect", self.fireEffect)
-  end; self:Print("ENT.FireOne: Setup effects success", self.fireEffect)
+    eff:SetOrigin(pos)
+    eff:SetStart(pos)
+    eff:SetScale(1)
+    util.Effect(self.fireEffect, eff)
+  end
+
   local ent = ents.Create("cannon_prop")
   if(not (ent and ent:IsValid())) then
     self:Print("ENT.FireOne: Cannot create projectile !"); return nil end
-  self:Print("ENT.FireOne: Projectile crteated", ent)
   self:DeleteOnRemove(ent)
   ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
   ent:SetModel(self.fireModel)
@@ -159,27 +143,21 @@ function ENT:FireOne()
     ent.exploded        = false
     ent.explosiveRadius = self.explosiveRadius
     ent.explosivePower  = self.explosivePower
-  end; self:Print("ENT.FireOne: Explosive projectile", self.fireExplosives)
+  end
   if(self.killDelay > 0) then
     ent.dietime = CurTime() + self.killDelay end
-  self:Print("ENT.FireOne: Kill delay", self.killDelay, ent.dietime)
-  ent:Spawn(); self:Print("ENT.FireOne: Spawn projectile")
+  ent:Spawn()
   local iPhys = self:GetPhysicsObject()
   local uPhys =  ent:GetPhysicsObject()
-  self:Print("ENT.FireOne: Get settings success")
   if(iPhys and iPhys:IsValid()) then
     reco = dir * -self.fireForce * self.recoilAmount
-    self:Print("ENT.FireOne: Recoil", iPhys, reco)
     iPhys:ApplyForceCenter(reco)
   end -- Recoil. The cannon could conceivably work without a valid physics model.
-  self:Print("ENT.FireOne: Recoil Success")
   if (not (uPhys and uPhys:IsValid())) then -- The bullets can't though
-    self:Print("ENT.FireOne: Invalid physics for projectile", iPhys, ent) return nil end
-  self:Print("ENT.FireOne: Setup projectile launch")
+    self:Print("ENT.FireOne: Invalid physics for projectile !", iPhys, ent) return nil end
   uPhys:SetMass(self.fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
-  uPhys:ApplyForceCenter(dir * self.fireForce) -- Fire it off infront of us
-  self:Print("ENT.FireOne: Launch projectile")
+  uPhys:ApplyForceCenter(dir * self.fireForce) -- Fire it off in front of us
   if (WireLib) then
     WireLib.TriggerOutput(self, "Fired", 1)
     WireLib.TriggerOutput(self, "LastBullet", ent)
@@ -188,36 +166,25 @@ function ENT:FireOne()
 end
 
 function ENT:TriggerInput(key, value)
-  self:Print("ENT.TriggerInput: Start")
   if(key == "FireOnce" and value ~= 0) then
-    self:Print("ENT.TriggerInput: FireOne Start")
     self:FireOne()
-    self:Print("ENT.TriggerInput: FireOne Success")
   elseif (key == "AutoFire") then
     if(value == 0) then
-      self:Print("ENT.TriggerInput: FireDisable Start")
       self:FireDisable()
-      self:Print("ENT.TriggerInput: FireDisable Success")
     else
-      self:Print("ENT.TriggerInput: FireEnable Start")
       self:FireEnable()
-      self:Print("ENT.TriggerInput: FireEnable Success")
     end
-  end; self:Print("ENT.TriggerInput: Success")
+  end
 end
 
-local function On(ply, ent )
+local function On(ply, ent)
   if(not (ent and ent:IsValid())) then return end
-  ent:Print("ENT.On: Start")
   ent:FireEnable()
-  ent:Print("ENT.On: Success")
 end
 
-local function Off( pl, ent )
+local function Off(pl, ent)
   if(not (ent and ent:IsValid())) then return end
-  ent:Print("ENT.Off: Start")
   ent:FireDisable()
-  ent:Print("ENT.Off: Success")
 end
 
 numpad.Register( "propcannon_On",  On )

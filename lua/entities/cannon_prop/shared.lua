@@ -22,7 +22,9 @@ end
 
 function ENT:Print(...)
   if(not varLogUsed:GetBool()) then return end;
-  local sLin = "["..os.date().."] "..self.PrintName.." > "..tostring(self)..":"
+  local sD = os.date("%y-%m-%d").." "..os.date("%H:%M:%S")
+  local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))
+  local sLin = "["..sD.."] "..sI.." > "..tostring(self)..":"
   if(varLogFile:GetBool()) then
     local sDel = "\t"
     local tData, nID = {...}, 1
@@ -41,58 +43,59 @@ function ENT:Initialize()
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
   self:SetSolid  (SOLID_VPHYSICS)
-
-  if(not IsValid(self.Owner)) then
-    self.Owner = self
-    self:Print("ENT.Initialize: Created without a valid owner !")
-  end
-
+  if(not IsValid(self.Owner)) then self.Owner = self end
+  self.effectDataClass = EffectData()
   self:SetPhysicsAttacker(self.Owner)
-
+  self.exploded = false
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
-  self:Print("ENT.Initialize: Success")
 end
 
 hook.Add("EntityTakeDamage", "cannon_prop kill crediting",
   function(ent, me, attack, amt, info)
-    print("EntityTakeDamage: Call", ent, me, attack, amt, info)
     if(me.ClassName == "cannon_prop") then
-      print("EntityTakeDamage: Class")
       info:SetAttacker(me.Owner)
-      print("EntityTakeDamage: Attacker", me.Owner)
     end
-    print("EntityTakeDamage: Success")
   end)
 
-function ENT:Explode()
+function ENT:Explode(dmgInfo)
   if(self.exploded) then return end
+  -- Make sure we set the explode flag here, otherwise recursion
+  -- will take place in `OnTakeDamage` and the game will crash !
+  self.exploded = true -- The `exploded` flag is right where it needs to be
   local pos = self:GetPos()
-  if(not self.effectDataClass) then
-    self:Print("ENT.Explode: Alloc")
-    self.effectDataClass = EffectData()
-  end; local effectData = self.effectDataClass
-  effectData:SetStart(pos)
-  effectData:SetOrigin(pos)
-  effectData:SetScale(1)
-  self:Print("ENT.Explode: Effect make")
-  util.Effect("Explosion", effectData)
-  self:Print("ENT.Explode: Effect blast")
-  util.BlastDamage(self, self.Owner, pos, self.explosiveRadius, self.explosivePower)
-  self:Print("ENT.Explode: Effect remove")
-  self.exploded = true; self:Remove()
-  self:Print("ENT.Explode: Success")
+  local eff = self.effectDataClass
+  local pow = self.explosivePower
+  local rad = self.explosiveRadius
+  if(eff) then -- Use the cached effect
+    eff:SetStart(pos)
+    eff:SetOrigin(pos)
+    eff:SetScale(1)
+    util.Effect("Explosion", eff)
+  end
+  if(self and self:IsValid() and util.IsInWorld(pos) and
+     self.Owner and self.Owner:IsValid() and
+     self.explosiveRadius > 0 and self.explosivePower > 0)
+  then -- This will call `OnTakeDamage` internaly and trigger a chain explosions
+    if(dmgInfo) then -- When damage information is passed `OnTakeDamage`
+      util.BlastDamageInfo(dmgInfo, pos, rad)
+    else -- When there is no damage information present
+      util.BlastDamage(self, self.Owner, pos, rad, pow)
+    end
+    self:Print("ENT.Explode: Blast conditions OK", dmgInfo)
+  else
+    self:Print("ENT.Explode: Blast conditions not met !")
+  end
+  self:Remove()
 end
 
 function ENT:OnTakeDamage(dmgInfo)
-  if(self.explosive) then self:Explode() end
+  if(self.explosive) then self:Explode(dmgInfo) end
   self:TakePhysicsDamage(dmgInfo)
-  self:Print("ENT.OnTakeDamage: Success", dmgInfo)
 end
 
 local function doBoom(self)
   if(self.explosive) then self:Explode() end
-  self:Print("ENT.doBoom: Success")
 end
 
 -- Even a tiny flinch can set it off

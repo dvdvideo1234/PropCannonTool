@@ -31,7 +31,9 @@ end
 
 function ENT:Print(...)
   if(not varLogUsed:GetBool()) then return end;
-  local sLin = "["..os.date().."] "..self.PrintName.." > "..tostring(self)..":"
+  local sD = os.date("%y-%m-%d").." "..os.date("%H:%M:%S")
+  local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))
+  local sLin = "["..sD.."] "..sI.." > "..tostring(self)..":"
   if(varLogFile:GetBool()) then
     local sDel = "\t"
     local tData, nID = {...}, 1

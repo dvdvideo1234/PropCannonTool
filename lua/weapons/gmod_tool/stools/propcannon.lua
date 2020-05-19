@@ -24,7 +24,7 @@ if(SERVER) then
 
   function MakeCannon(ply, pos, ang, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     if (not ply:CheckLimit("propcannons")) then return false end
-    local eCannon = ents.Create( "gmod_propcannon" )
+    local eCannon = ents.Create("gmod_propcannon")
     eCannon:SetPos(pos)
     eCannon:SetAngles(ang)
     eCannon:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
@@ -129,7 +129,7 @@ function TOOL:LeftClick(tr)
 
   if(trEnt and trEnt:IsValid() and
      trEnt:GetClass()  == "gmod_propcannon" and
-     trEnt:GetPlayer() == ply) then -- Do not update other ppl stuff
+     trEnt:GetPlayer() == ply) then -- Do not update other people stuff
      trEnt:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     return true
   end
