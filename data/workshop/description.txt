@@ -1,0 +1,32 @@
+[h1] Description [/h1]
+This addon can give you the ability to have your own movable cannon that fires props
+
+[h1] Feature List [/h1]
+[list]
+ [*] Supports and controlled by wire
+ [*] Very stable damage inflicting hook
+ [*] Works with advanced duplicator 1 and 2
+ [*] Both shooting modes have dedicated numpad control
+ [*] New and recent code-base in tone with GMOD 13
+ [*] Ability to change the model of the cannon and ammo on the fly
+ [*] Additional features not included by the original author
+ [*] Logging is available ( turn off by default )
+ [*] Ability to update a cannon with left click entity class
+[/list]
+
+For detailed manual, please refer to readme.md
+
+Readme: https://github.com/dvdvideo1234/PropCannonTool/blob/master/readme.md
+
+Git repository: https://github.com/dvdvideo1234/PropCannonTool
+
+Report errors to: https://github.com/dvdvideo1234/PropCannonTool/issues
+
+Reuploading and source stealing will not be tolerated !
+Please respect the Original author for creating this addon and
+me for fixing it to Gmod 13 version coding style !
+Selling it is also out of option, as the open source suggests !
+
+If you want to support me and you like what I do:
+
+paypal.me/DeyanVasilev
