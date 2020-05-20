@@ -17,8 +17,8 @@ ENT.AdminSpawnable  = false
 
 local pcnPrefx   = ENT.PrintName:gsub(" ", "_"):lower()
 local pcnFvars   = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
-local varLogFile = CreateConVar(pcnPrefx.."logfile", "1", pcnFvars, "Enable logging in a file")
-local varLogUsed = CreateConVar(pcnPrefx.."logused", "1", pcnFvars, "Enable logging on error")
+local varLogFile = CreateConVar(pcnPrefx.."logfile", "0", pcnFvars, "Enable logging in a file")
+local varLogUsed = CreateConVar(pcnPrefx.."logused", "0", pcnFvars, "Enable logging on error")
 
 if(not file.Exists("prop_cannon_tool","DATA") and varLogFile:GetBool()) then
   file.CreateDir("prop_cannon_tool")
