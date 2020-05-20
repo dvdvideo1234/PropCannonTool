@@ -40,6 +40,7 @@ if(CLIENT) then
 end
 
 function ENT:Initialize()
+  self:Print("ENT.Initialize Start")
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
   self:SetSolid  (SOLID_VPHYSICS)
@@ -49,17 +50,20 @@ function ENT:Initialize()
   self.exploded = false
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
+  self:Print("ENT.Initialize Success")
 end
 
 hook.Add("EntityTakeDamage", "cannon_prop kill crediting",
-  function(ent, me, attack, amt, info)
-    if(me.ClassName == "cannon_prop") then
+  function(ent, info)
+    local me = info:GetInflictor() -- Returns the inflictor of the damage. This is not necessarily a weapon
+    if(me:GetClass() == "cannon_prop") then
       info:SetAttacker(me.Owner)
     end
   end)
 
 function ENT:Explode(dmgInfo)
   if(self.exploded) then return end
+  self:Print("ENT.Explode Start")
   -- Make sure we set the explode flag here, otherwise recursion
   -- will take place in `OnTakeDamage` and the game will crash !
   self.exploded = true -- The `exploded` flag is right where it needs to be
@@ -87,6 +91,7 @@ function ENT:Explode(dmgInfo)
     self:Print("ENT.Explode: Blast conditions not met !")
   end
   self:Remove()
+  self:Print("ENT.Explode Success")
 end
 
 function ENT:OnTakeDamage(dmgInfo)

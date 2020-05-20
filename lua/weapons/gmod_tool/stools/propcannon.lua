@@ -3,10 +3,12 @@
   ~ lexi ~
 --]]
 
-cleanup.Register("propcannons")
+local gsUnit = "propcannon"
+
+cleanup.Register(gsUnit.."s")
 
 if(SERVER) then
-  CreateConVar("sbox_maxpropcannons", 10, "The maximum number of prop cannon guns you can have out at one time.")
+  CreateConVar("sbox_max"..gsUnit.."s", 10, "The maximum number of prop cannon guns you can have out at one time.")
 
   function getFireDirection(dir)
     local bodir = string.Explode(",",dir)
@@ -17,45 +19,78 @@ if(SERVER) then
     return fivec
   end
 
-  local function onRemove(self, down, up)
-    numpad.Remove(down)
-    numpad.Remove(up)
+  function notifyUser(ply, msg, type, ...) -- Send notification to client that something happened
+    ply:SendLua("GAMEMODE:AddNotify(\""..tostring(msg).."\", NOTIFY_"..tostring(type)..", 6)")
+    ply:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
+    return ...
   end
 
-  function MakeCannon(ply, pos, ang, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
-    if (not ply:CheckLimit("propcannons")) then return false end
-    local eCannon = ents.Create("gmod_propcannon")
+  function MakeCannon(ply, pos, ang, keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+    if (not ply:CheckLimit(gsUnit.."s")) then return false end
+    local eCannon = ents.Create("gmod_"..gsUnit)
     eCannon:SetPos(pos)
     eCannon:SetAngles(ang)
-    eCannon:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+    eCannon:Setup(keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     eCannon:Spawn()
     eCannon:SetPlayer(ply)
     eCannon:SetMaterial("models/shiny") -- Make it shiny and black
+    eCannon:SetRenderMode(RENDERMODE_TRANSALPHA)
     eCannon:SetColor(Color(0, 0, 0, 255))
-    eCannon.numpadKey = key
-    eCannon:CallOnRemove("NumpadCleanup", onRemove,
-      numpad.OnDown(ply, key, "propcannon_On", eCannon),
-      numpad.OnUp  (ply, key, "propcannon_Off",eCannon)
-    )
     eCannon:SetCollisionGroup(COLLISION_GROUP_WORLD)
-    ply:AddCount("propcannons", eCannon)
+    ply:AddCount(gsUnit.."s", eCannon)
     return eCannon
   end
 
-  duplicator.RegisterEntityClass( "gmod_propcannon", MakeCannon, "Pos", "Ang",
-       "numpadKey"      , "fireForce" , "cannonModel"   , "fireModel"     ,
-       "recoilAmount"   , "fireDelay" , "killDelay"     , "explosivePower",
+  duplicator.RegisterEntityClass( "gmod_"..gsUnit, MakeCannon, "Pos", "Ang",
+       "numpadKeyAF" , "numpadKeyFO" , "fireForce" , "cannonModel"   , "fireModel"     ,
+       "recoilAmount", "fireDelay"   , "killDelay" , "explosivePower",
        "explosiveRadius", "fireEffect", "fireExplosives", "fireDirection" , "fireMass")
 
 elseif(CLIENT) then
-
-  language.Add("Tool.propcannon.name" , "Prop Cannon")
-  language.Add("Tool.propcannon.desc" , "A movable cannon that can fire props")
-  language.Add("Tool.propcannon.0"    , "Click to spawn a cannon. Click on an existing cannon to change it. Right click on a prop to use the model as ammo.")
-  language.Add("Undone_propcannon"    , "Undone Prop Cannon")
-  language.Add("Cleanup_propcannons"  , "Prop Cannons")
-  language.Add("Cleaned_propcannons"  , "Cleaned up all Prop Cannons")
-  language.Add("SBoxLimit_propcannons", "You've hit the Prop Cannons limit!")
+  TOOL.Information = {
+    { name = "info",  stage = 1},
+    { name = "left"      },
+    { name = "right"     },
+    { name = "right_use",icon2 = "gui/e.png"},
+    { name = "reload"    }
+  }
+  language.Add("tool."..gsUnit..".1"                   , "Manipulates a movable cannon that can fire props")
+  language.Add("tool."..gsUnit..".left"                , "Creates a cannon. Weld to the trace when prop is hit")
+  language.Add("tool."..gsUnit..".right"               , "Select the trace model to be used as ammo")
+  language.Add("tool."..gsUnit..".right_use"           , "Select the trace model to be used as cannon")
+  language.Add("tool."..gsUnit..".reload"              , "Removes the prop cannon")
+  language.Add("tool."..gsUnit..".name"                , "Prop cannon")
+  language.Add("tool."..gsUnit..".desc"                , "A movable cannon that can fire props")
+  language.Add("tool."..gsUnit..".0"                   , "Click to spawn a cannon. Click on an existing cannon to change it. Right click on a prop to use the model as ammo.")
+  language.Add("tool."..gsUnit..".cannon_model"        , "Cannon model:")
+  language.Add("tool."..gsUnit..".force_con"           , "Force:")
+  language.Add("tool."..gsUnit..".force"               , "How much force the cannon fires with")
+  language.Add("tool."..gsUnit..".ammo_mass_con"       , "Ammo mass:")
+  language.Add("tool."..gsUnit..".ammo_mass"           , "How much does the bullet weight")
+  language.Add("tool."..gsUnit..".delay_con"           , "Fire delay:")
+  language.Add("tool."..gsUnit..".delay"               , "How many seconds after firing before the cannon can fire again")
+  language.Add("tool."..gsUnit..".recoil_con"          , "Recoil:")
+  language.Add("tool."..gsUnit..".recoil"              , "How much to multiply the cannon's recoil by")
+  language.Add("tool."..gsUnit..".kill_delay_con"      , "Prop lifetime:")
+  language.Add("tool."..gsUnit..".kill_delay"          , "How many seconds each fired prop will exist for after being fired (0 to last forever)")
+  language.Add("tool."..gsUnit..".explosive_power_con" , "Explosive power:")
+  language.Add("tool."..gsUnit..".explosive_power"     , "If the prop is set to explode, how much damage to do")
+  language.Add("tool."..gsUnit..".explosive_radius_con", "Explosive radius:")
+  language.Add("tool."..gsUnit..".explosive_radius"    , "If the prop is set to explode, how big the explosion should be")
+  language.Add("tool."..gsUnit..".explosive_con"       , "Explode on contact:")
+  language.Add("tool."..gsUnit..".explosive"           , "Should the fired props explode when they hit something")
+  language.Add("tool."..gsUnit..".fire_effect_con"     , "Firing effect:")
+  language.Add("tool."..gsUnit..".fire_effect"         , "The effect to play when the cannon fires")
+  language.Add("tool."..gsUnit..".keyaf_con"           , "Autofire toggle:")
+  language.Add("tool."..gsUnit..".keyaf"               , "The dedicated keypad button to activate the cannon autofire")
+  language.Add("tool."..gsUnit..".keyfo_con"           , "Single shot:")
+  language.Add("tool."..gsUnit..".keyfo"               , "The dedicated keypad button to preform a single shot when pressed")
+  language.Add("tool."..gsUnit..".ammo_model_con"      , "Cannon ammo:")
+  language.Add("tool."..gsUnit..".ammo_model"          , "This is the prop being selected for cannon ammunition")
+  language.Add("Undone_"..gsUnit, "Undone Prop Cannon")
+  language.Add("Cleanup_"..gsUnit.."s", "Prop Cannons")
+  language.Add("Cleaned_"..gsUnit.."s", "Cleaned up all Prop Cannons")
+  language.Add("SBoxLimit_"..gsUnit.."s", "You've hit the Prop Cannons limit!")
 
   list.Set("CannonModels","models/dav0r/thruster.mdl",{})
   list.Set("CannonModels","models/props_junk/wood_crate001a.mdl",{})
@@ -73,20 +108,25 @@ elseif(CLIENT) then
   list.Set("CannonAmmoModels","models/props_debris/concrete_cynderblock001.mdl",{})
   list.Set("CannonAmmoModels","models/props_junk/popcan01a.mdl",{})
 
-  list.Set("CannonEffects", "Explosion",  {propcannon_fire_effect = "Explosion"})
-  list.Set("CannonEffects", "Sparks",     {propcannon_fire_effect = "cball_explode"})
-  list.Set("CannonEffects", "Bomb drop",  {propcannon_fire_effect = "RPGShotDown"})
-  list.Set("CannonEffects", "Flash",      {propcannon_fire_effect = "HelicopterMegaBomb"})
-  list.Set("CannonEffects", "Machine Gun",{propcannon_fire_effect = "HelicopterImpact"})
-  list.Set("CannonEffects", "None",       {propcannon_fire_effect = "none"})
+  -- https://wiki.facepunch.com/gmod/Effects
+  table.Empty(list.GetForEdit("CannonEffects"))
+  list.Add("CannonEffects", {name = "Explosion"     , effect = "Explosion"})
+  list.Add("CannonEffects", {name = "Impact (RPG)"  , effect = "RPGShotDown"})
+  list.Add("CannonEffects", {name = "Sparks"        , effect = "cball_explode"})
+  list.Add("CannonEffects", {name = "Baloon PoP"    , effect = "balloon_pop"})
+  list.Add("CannonEffects", {name = "Manhack Sparks", effect = "ManhackSparks"})
+  list.Add("CannonEffects", {name = "Flash"         , effect = "HelicopterMegaBomb"})
+  list.Add("CannonEffects", {name = "Machine Gun"   , effect = "HelicopterImpact"})
+  list.Add("CannonEffects", {name = "Antlion Guts"  , effect = "AntlionGib"})
+  list.Add("CannonEffects", {name = "None"          , effect = "none"})
 
   TOOL.Category = "Entities"
-  TOOL.Name     = language.GetPhrase("Tool.propcannon.name")
-
+  TOOL.Name     = language.GetPhrase("tool."..gsUnit..".name")
 end
 
 TOOL.ClientConVar = {
-  ["key"]              = 42,
+  ["keyaf"]            = 0,
+  ["keyfo"]            = 0,
   ["force"]            = 20000,
   ["delay"]            = 5,
   ["recoil"]           = 1,
@@ -108,7 +148,8 @@ function TOOL:LeftClick(tr)
   elseif(CLIENT) then return true
   elseif(not util.IsValidPhysicsObject(trEnt, tr.PhysicsBone)) then return false end
   local ply       = self:GetOwner()
-  local key       = self:GetClientNumber("key")
+  local keyaf     = self:GetClientNumber("keyaf")
+  local keyfo     = self:GetClientNumber("keyfo")
   local force     = self:GetClientNumber("force")
   local delay     = self:GetClientNumber("delay")
   local recoil    = self:GetClientNumber("recoil")
@@ -128,17 +169,17 @@ function TOOL:LeftClick(tr)
           util.IsValidProp (ammo))) then return false end
 
   if(trEnt and trEnt:IsValid() and
-     trEnt:GetClass()  == "gmod_propcannon" and
+     trEnt:GetClass()  == "gmod_"..gsUnit and
      trEnt:GetPlayer() == ply) then -- Do not update other people stuff
-     trEnt:Setup(force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+     trEnt:Setup(keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
     return true
   end
 
   local ang = tr.HitNormal:Angle()
         ang.pitch = ang.pitch + 90
 
-  local eCannon = MakeCannon(ply, tr.HitPos, ang, key, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
-  if(not eCannon) then return false end
+  local eCannon = MakeCannon(ply, tr.HitPos, ang, keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+  if(not (eCannon and eCannon:IsValid())) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
   local cWeld
@@ -150,13 +191,13 @@ function TOOL:LeftClick(tr)
     if(phPhys and phPhys:IsValid()) then
       phPhys:EnableMotion(false) end
   end
-  undo.Create("propcannon")
-  undo.SetPlayer(ply)
-  undo.AddEntity(eCannon)
-  undo.AddEntity(cWeld)
+  undo.Create(gsUnit)
+    undo.SetPlayer(ply)
+    undo.AddEntity(eCannon)
+    undo.AddEntity(cWeld)
   undo.Finish()
-  ply:AddCleanup("propcannons", eCannon)
-  ply:AddCleanup("propcannons", cWeld)
+  ply:AddCleanup(gsUnit.."s", eCannon)
+  ply:AddCleanup(gsUnit.."s", cWeld)
   return true
 end
 
@@ -167,11 +208,24 @@ function TOOL:RightClick(tr)
          (trEnt and trEnt:IsValid()) and
           trEnt:GetClass() == "prop_physics")) then return false end
   local model = trEnt:GetModel()
-  if(not util.IsValidModel(model)) then -- you never know
-    return false end
+  if(not util.IsValidModel(model)) then return false end
   local ply = self:GetOwner()
-  ply:ConCommand("propcannon_ammo_model "..model.."\n")
-  ply:PrintMessage(HUD_PRINTCENTER, "New ammo model <"..string.GetFileFromFilename(model).."> selected!")
+  if(ply:KeyDown(IN_USE)) then
+    ply:ConCommand(gsUnit.."_cannon_model "..model.."\n")
+    notifyUser(ply, "Cannon: "..model.." !",  "UNDO")
+  else
+    ply:ConCommand(gsUnit.."_ammo_model "..model.."\n")
+    notifyUser(ply, "Ammo: "..model.." !",  "UNDO")
+  end
+end
+
+function TOOL:Reload(tr)
+  if(CLIENT) then return true end
+  if(not tr.Hit) then return false end
+  local trEnt = tr.Entity
+  if(not (trEnt and trEnt:IsValid())) then return false end
+  if(trEnt:GetClass() ~= "gmod_"..gsUnit) then return false end
+  trEnt:Remove(); return true
 end
 
 function TOOL:UpdateGhost(ent, ply) --( ent, player )
@@ -181,7 +235,7 @@ function TOOL:UpdateGhost(ent, ply) --( ent, player )
   if(not trHit or
        ((trEnt and trEnt:IsValid()) and
         (trEnt:IsPlayer() or
-         trEnt:GetClass() == "gmod_propcannon"))) then
+         trEnt:GetClass() == "gmod_"..gsUnit))) then
     ent:SetNoDraw(true); return end
   local angles = tr.HitNormal:Angle()
   angles.pitch = angles.pitch + 90
@@ -202,101 +256,61 @@ function TOOL:Think()
   end; self:UpdateGhost(ghEnt, self:GetOwner())
 end
 
-local ConVarList = TOOL:BuildConVarList()
-function TOOL.BuildCPanel(cp)
-  cp:SetName(language.GetPhrase("Tool.propcannon.name"))
-  cp:Help   (language.GetPhrase("Tool.propcannon.desc"))
+local gtConvarList = TOOL:BuildConVarList()
 
-  cp:AddControl("ComboBox",{
-                 Label      = "#Presets",
-                 MenuButton = 1,
-                 Folder     = "propcannon",
-                 Options    = {["Default"] = ConVarList},
-                 CVars      = table.GetKeys(ConVarList)})
+function TOOL.BuildCPanel(cp) local pItem
+  cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
+  cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
+
+  local pItem = vgui.Create("ControlPresets", cp)
+        pItem:SetPreset(gsUnit)
+        pItem:AddOption("default", gtConvarList)
+        for key, val in pairs(table.GetKeys(gtConvarList)) do
+          pItem:AddConVar(val) end
+  cp:AddItem(pItem)
 
   cp:AddControl( "PropSelect", {
-    Label = "Cannon Model:",
-    ConVar = "propcannon_cannon_model",
+    Label    = language.GetPhrase("tool."..gsUnit..".cannon_model"),
+    ConVar   = gsUnit.."_cannon_model",
     Category = "Cannons",
-    Models = list.Get( "CannonModels" )
+    Models   = list.Get("CannonModels")
   })
 
-    cp:AddControl( "Numpad", {
-    Label = "Keypad button:",
-    Command = "propcannon_key",
-    Buttonsize = "22"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Force:",
-    Description = "How much force the cannon fires with",
-    Type = "float",
-    Min = "0",
-    Max = "500000",
-    Command = "propcannon_force"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Ammo mass:",
-    Description = "How much does the bullet weight",
-    Type = "float",
-    Min = "1",
-    Max = "50000",
-    Command = "propcannon_ammo_mass"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Reload Delay:",
-    Description = "How many seconds after firing before the cannon can fire again",
-    Type = "float",
-    Min = "0",
-    Max = "50",
-    Command = "propcannon_delay"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Recoil:",
-    Description = "How much to multiply the cannon's recoil by.",
-    Type = "float",
-    Min = "0",
-    Max = "10",
-    Command = "propcannon_recoil"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Prop Lifetime:",
-    Description = "How many seconds each fired prop will exist for after being fired (0 to last forever)",
-    Type = "float",
-    Min = "0",
-    Max = "30",
-    Command = "propcannon_kill_delay"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Explosive Power:",
-    Description = "If the prop is set to explode, how much damage to do.",
-    Type = "float",
-    Min = "0",
-    Max = "200",
-    Command = "propcannon_explosive_power"
-  })
-    cp:AddControl( "Slider", {
-    Label = "Explosive Radius:",
-    Description = "If the prop is set to explode, how big the explosion should be.",
-    Type = "float",
-    Min = "0",
-    Max = "500",
-    Command = "propcannon_explosive_radius"
-  })
-    cp:AddControl( "Checkbox", {
-    Label = "Explode on contact:",
-    Description = "Should the fired props explode when they hit something",
-    Command = "propcannon_explosive"
-  })
+  pItem = vgui.Create("CtrlNumPad", cp)
+  pItem:SetLabel1(language.GetPhrase("tool."..gsUnit..".keyaf_con"))
+  pItem:SetLabel2(language.GetPhrase("tool."..gsUnit..".keyfo_con"))
+  pItem:SetConVar1(gsUnit.."_keyaf")
+  pItem:SetConVar2(gsUnit.."_keyfo")
+  pItem.NumPad1:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyaf"))
+  pItem.NumPad2:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyfo"))
+  cp:AddPanel(pItem)
+
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, 500000, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".force"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, 50000, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_mass"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, 50, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".delay"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 1, 10, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".recoil"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, 30, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".kill_delay"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, 200, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, 500, 7)
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
+  pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
+
   cp:AddControl( "PropSelect", {
-    Label = "Cannon Ammo:",
-    ConVar = "propcannon_ammo_model",
+    Label    = language.GetPhrase("tool."..gsUnit..".ammo_model"),
+    ConVar   = "propcannon_ammo_model",
     Category = "Ammo",
-    Models = list.Get( "CannonAmmoModels" )
+    Models   = list.Get("CannonAmmoModels")
   })
-  cp:AddControl( "ComboBox", {
-    Label = "Firing Effect:",
-    Description = "The effect to play when the cannon fires",
-    MenuButton = "0",
-    Options = list.Get( "CannonEffects" )
-  })
+
+  pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".fire_effect"))
+  local tE = list.GetForEdit("CannonEffects")
+  for iE = 1, #tE do pItem:AddChoice(tE[iE].name, tE[iE].effect) end
 end

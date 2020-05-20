@@ -15,11 +15,6 @@ ENT.Contact         = "lexi@lexi.org.uk"  -- dvd_video@abv.bg
 ENT.Spawnable       = false
 ENT.AdminSpawnable  = false
 
-function pcnRoundValue(exact, frac)
-  local q,f = math.modf(exact/frac)
-  return frac * (q + (f > 0.5 and 1 or 0))
-end
-
 local pcnPrefx   = ENT.PrintName:gsub(" ", "_"):lower()
 local pcnFvars   = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 local varLogFile = CreateConVar(pcnPrefx.."logfile", "1", pcnFvars, "Enable logging in a file")
