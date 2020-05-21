@@ -7,11 +7,13 @@ This addon can give you the ability to have your own movable cannon that fires p
  [*] Very stable damage inflicting hook
  [*] Works with advanced duplicator 1 and 2
  [*] Both shooting modes have dedicated numpad control
+ [*] When connected wire inputs override internal values
  [*] New and recent code-base in tone with GMOD 13
  [*] Ability to change the model of the cannon and ammo on the fly
  [*] Additional features not included by the original author
  [*] Logging is available ( turn off by default )
  [*] Ability to update a cannon with left click entity class
+ [*] Maximum value control setup tweaks are available
 [/list]
 
 For detailed manual, please refer to readme.md

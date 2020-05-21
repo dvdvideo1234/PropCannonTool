@@ -7,12 +7,19 @@ AddCSLuaFile("shared.lua")
 include("shared.lua")
 
 local gsUnit = "propcannon"
-local gsCall = "remove_numpad_keys"
+local gsCall = gsUnit.."_numpad_keys"
+local varRecAmount = GetConVar(gsUnit.."_maxrecamount")
+local varFireDelay = GetConVar(gsUnit.."_maxfiredelay")
+local varKillDelay = GetConVar(gsUnit.."_maxkilldelay")
+local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
+local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
+local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
+local varFireForce = GetConVar(gsUnit.."_maxfireforce")
 
 local function numpadRemoveKeys(self, ...)
   local iD, tA = 1, {...}
   for iD = 1, # tA do sK = tostring(tA[iD])
-    self:Print("removeKeys("..iD.."): ["..sK.."]")
+    self:Print("ENT.RemoveKeys("..iD.."): ["..sK.."]")
     numpad.Remove(tA[iD])
   end
 end
@@ -27,10 +34,32 @@ function ENT:Initialize()
   if(WireLib) then
     WireLib.CreateSpecialInputs(self,{
       "FireOnce",
-      "AutoFire"
-    }, { "NORMAL", "NORMAL" }, {
-      "Fire a single prop",
-      "Fire repeatedly until released."
+      "AutoFire",
+      "FireDelay",
+      "FireEffect",
+      "FireModel",
+      "FireExplosives",
+      "ExplosiveRadius",
+      "ExplosivePower",
+      "KillDelay",
+      "FireForce",
+      "RecoilAmount",
+      "FireMass"
+    }, { "NORMAL", "NORMAL", "NORMAL", "STRING",
+         "STRING", "NORMAL", "NORMAL", "NORMAL",
+         "NORMAL", "NORMAL", "NORMAL", "NORMAL" }, {
+      "Fire a single prop while enabled",
+      "Fire repeatedly until off (triggered)",
+      "The time to pass before next shot",
+      "Effect displayed when fired",
+      "Overrides the internal bullet model",
+      "Should it have explosive bullets",
+      "Explosive bullets blast radius",
+      "Explosive bullets blast power",
+      "How much time does the bullet lives",
+      "The force the bullet is fired with",
+      "The amount of the recolil force",
+      "The amount of mass applied on the bullet"
     })
     WireLib.CreateSpecialOutputs(self, {
       "ReadyToFire",
@@ -38,15 +67,16 @@ function ENT:Initialize()
       "AutoFiring",
       "LastBullet"
     }, { "NORMAL", "NORMAL", "NORMAL", "ENTITY"} , {
-      "Is the cannon ready to fire again?",
-      "Triggered every time the cannon fires.",
-      "Is the cannon currently autofiring?",
-      "The last prop fired"
+      "Is the cannon ready to fire again",
+      "Triggered every time the cannon fires",
+      "Is the cannon currently autofiring",
+      "The last prop that was fired"
     })
   end
 end
 
-
+ENT.wenable         = false
+ENT.enabled         = false
 ENT.numpadID        = {}
 ENT.numpadKeyAF     = 42
 ENT.numpadKeyFO     = 42
@@ -72,39 +102,39 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)
   self.numpadKeyFO     = math.floor(tonumber(numpadKeyFO) or 0)
   -- Remove the previosky used numpad keys anf handle numpad crap
-  if(self.numpadID.Tgg) then numpad.Remove(self.numpadID.Tgg) end
-  if(self.numpadID.One) then numpad.Remove(self.numpadID.One) end
-  self.numpadID.Tgg    = numpad.OnDown(ply, self.numpadKeyAF, gsUnit.."_TGG", self)
-  self.numpadID.One    = numpad.OnDown(ply, self.numpadKeyFO, gsUnit.."_ONE", self)
-  self:Print("ENT.Setup: Keys", self.numpadID.Tgg, self.numpadID.One)
+  if(self.numpadID.AF) then numpad.Remove(self.numpadID.AF) end
+  if(self.numpadID.FO) then numpad.Remove(self.numpadID.FO) end
+  self.numpadID.AF     = numpad.OnDown(ply, self.numpadKeyAF, gsUnit.."_AF", self)
+  self.numpadID.FO     = numpad.OnDown(ply, self.numpadKeyFO, gsUnit.."_FO", self)
+  self:Print("ENT.Setup: Keys", self.numpadID.AF, self.numpadID.FO)
   self:RemoveCallOnRemove(gsCall)
-  self:CallOnRemove(gsCall, numpadRemoveKeys, self.numpadID.Tgg, self.numpadID.One)
+  self:CallOnRemove(gsCall, numpadRemoveKeys, self.numpadID.AF, self.numpadID.FO)
   -- Polulate entity data slots wuth the player provided values
-  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, 500000)
+  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
   self.cannonModel     = tostring(cannonModel or ""); self:SetModel(self.cannonModel)
   self.fireModel       = tostring(fireModel or "")
-  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0,0,10)
-  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0,0,50)
-  self.killDelay       = math.Clamp(tonumber(killDelay) or 0,0,30)
-  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0,0,200)
-  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0,0,500)
+  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, varRecAmount:GetFloat())
+  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, varFireDelay:GetFloat())
+  self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, varKillDelay:GetFloat())
+  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, varExpPower:GetFloat())
+  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, varExpRadius:GetFloat())
   self.fireEffect      = tostring(fireEffect or "")
   self.fireExplosives  = tobool(fireExplosives)
-  self.fireMass        = math.Clamp(tonumber(fireMass) or 0,1,50000)
+  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, varFireMass:GetFloat())
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
   else self.fireDirection.z = 1 end -- Make sure length equal to 1
   self.effectDataClass = EffectData() -- Allocate effect data class
   self:SetOverlayText("- Prop Cannon -"..
                       "\nNumpad Key AutoFire("..(self.enabled and "On" or "Off")..") : "..
-                                                 math.Round(self.numpadKeyAF, 0)..
-                      "\nNumpad Key FireOne : "..math.Round(self.numpadKeyFO, 0)..
+                                                 math.Round(self.numpadKeyAF    , 0)..
+                      "\nNumpad Key FireOne : "..math.Round(self.numpadKeyFO    , 0)..
+                      "\nFiring Delay : "      ..math.Round(self.fireDelay      , 2)..
                       "\nFiring Force : "      ..math.Round(self.fireForce      , 2)..
                       "\nFiring Direction : "  ..math.Round(self.fireDirection.x, 2)..", "..
                                                  math.Round(self.fireDirection.y, 2)..", "..
                                                  math.Round(self.fireDirection.z, 2)..
-                      "\nFiring Delay : "      ..math.Round(self.fireDelay      , 2)..
-                      "\nExplosive Area : "    ..math.Round(self.explosiveRadius, 2)..
+                      "\nExplosive Radius : "  ..math.Round(self.explosiveRadius, 2)..
                       "\nBullet Weight : "     ..math.Round(self.fireMass       , 2)..
                       "\nFiring Effect : "     ..self.fireEffect..
                       "\nBullet Model : "      ..self.fireModel..
@@ -156,13 +186,13 @@ function ENT:Think() local wA, wO
     wA = self:WireRead("AutoFire")
     wO = self:WireRead("FireOnce")
   end
-
   if(self:CanFire()) then
     if(wO) then
       if(wO ~= 0) then self:FireOne() end
     else
       if(wA) then
-        if(wA ~= 0) then self:FireOne() end
+        if(wA ~= 0) then self.wenable = (not self.wenable) end
+        if(self.wenable) then self:FireOne() end
       else
         if(self.enabled) then self:FireOne() end
       end
@@ -176,16 +206,45 @@ end
 function ENT:FireOne()
   if(not self:CanFire()) then return end
   self:Print("ENT.FireOne: Start")
-  self.nextFire = (CurTime() + self.fireDelay)
+  -- Wiremod values used to store overriding values
+  local wfireDelay, wfireEffect, wfireModel, wfireExplosives
+  local wexplosiveRadius, wexplosivePower, wkillDelay
+  local wfireForce, wrecoilAmount, wfireMass
+  if(WireLib) then
+    wfireMass        = self:WireRead("FireMass")
+    wfireDelay       = self:WireRead("FireDelay")
+    wfireModel       = self:WireRead("FireModel")
+    wkillDelay       = self:WireRead("KillDelay")
+    wfireForce       = self:WireRead("FireForce")
+    wfireEffect      = self:WireRead("FireEffect")
+    wrecoilAmount    = self:WireRead("RecoilAmount")
+    wfireExplosives  = self:WireRead("FireExplosives")
+    wexplosivePower  = self:WireRead("ExplosivePower")
+    wexplosiveRadius = self:WireRead("ExplosiveRadius")
+  end
+
+  -- Genral values used for firing. Overrided by connected wire chips
+  local fireMass = ((wfireMass and wfireMass > 0) and wfireMass or self.fireMass)
+  local fireDelay = ((wfireDelay and wfireDelay >= 0) and wfireDelay or self.fireDelay)
+  local fireModel = ((wfireModel and util.IsValidModel(wfireModel)) and wfireModel or self.fireModel)
+  local killDelay = ((wkillDelay and wkillDelay >= 0) and wkillDelay or self.killDelay)
+  local fireForce = ((wfireForce and wfireForce >= 0) and wfireForce or self.fireForce)
+  local fireEffect = ((wfireEffect and (wfireEffect ~= "")) and wfireEffect or self.fireEffect)
+  local recoilAmount = ((wrecoilAmount and wrecoilAmount >= 0) and wrecoilAmount or self.recoilAmount)
+  local fireExplosives = self.fireExplosives; if(wfireExplosives) then fireExplosives = tobool(wfireExplosives) end
+  local explosivePower = ((wexplosivePower and wexplosivePower >= 0) and wexplosivePower or self.explosivePower)
+  local explosiveRadius = ((wexplosiveRadius and wexplosiveRadius >= 0) and wexplosiveRadius or self.explosiveRadius)
+
+  self.nextFire = (CurTime() + fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
   local dir = self:GetFireDirection()
   local eff = self.effectDataClass
-  if(self.fireEffect ~= "" and self.fireEffect ~= "none") then
+  if(fireEffect ~= "" and fireEffect ~= "none") then
     eff:SetOrigin(pos)
     eff:SetStart(pos)
     eff:SetScale(1)
-    util.Effect(self.fireEffect, eff)
-    self:Print("ENT.FireOne: Effects", "["..self.fireEffect.."]")
+    util.Effect(fireEffect, eff)
+    self:Print("ENT.FireOne: Effects", "["..fireEffect.."]")
   end
   local ent = ents.Create("cannon_prop")
   if(not (ent and ent:IsValid())) then
@@ -195,20 +254,20 @@ function ENT:FireOne()
   ent:SetSolid(SOLID_VPHYSICS)
   ent:SetMoveType(MOVETYPE_VPHYSICS)
   ent:SetNotSolid(false)
-  ent:SetModel(self.fireModel)
+  ent:SetModel(fireModel)
   ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
   ent:SetAngles(self:GetAngles())
   ent:SetOwner(self) -- For collision and such.
   ent.Owner = self:GetPlayer() -- For kill crediting
-  if(self.fireExplosives) then
+  if(fireExplosives) then
     ent.explosive       = true
     ent.exploded        = false
-    ent.explosiveRadius = self.explosiveRadius
-    ent.explosivePower  = self.explosivePower
+    ent.explosiveRadius = explosiveRadius
+    ent.explosivePower  = explosivePower
     self:Print("ENT.FireOne: Explosive")
   end
-  if(self.killDelay > 0) then
-    ent.dietime = CurTime() + self.killDelay end
+  if(killDelay > 0) then
+    ent.dietime = CurTime() + killDelay end
   ent:Spawn()
   ent:Activate()
   ent:SetRenderMode(RENDERMODE_TRANSALPHA)
@@ -217,15 +276,15 @@ function ENT:FireOne()
   local iPhys = self:GetPhysicsObject()
   local uPhys =  ent:GetPhysicsObject()
   if(iPhys and iPhys:IsValid()) then
-    reco = dir * -self.fireForce * self.recoilAmount
+    reco = dir * -fireForce * recoilAmount
     iPhys:ApplyForceCenter(reco)
     self:Print("ENT.FireOne: Recoil")
   end -- Recoil. The cannon could conceivably work without a valid physics model.
   if(not (uPhys and uPhys:IsValid())) then -- The bullets can't though
     self:Print("ENT.FireOne: Invalid physics for projectile !", iPhys, ent) return nil end
-  uPhys:SetMass(self.fireMass)
+  uPhys:SetMass(fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
-  uPhys:ApplyForceCenter(dir * self.fireForce) -- Fire it off in front of us
+  uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
   if(WireLib) then
     self:WireWrite("Fired", 1)
     self:WireWrite("LastBullet", ent)
@@ -252,5 +311,5 @@ local function fireOne(pl, ent)
   ent:FireOne()
 end
 
-numpad.Register(gsUnit.."_TGG", fireToggle)
-numpad.Register(gsUnit.."_ONE", fireOne)
+numpad.Register(gsUnit.."_AF", fireToggle)
+numpad.Register(gsUnit.."_FO", fireOne)

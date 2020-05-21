@@ -3,7 +3,14 @@
   ~ lexi ~
 --]]
 
-local gsUnit = "propcannon"
+local gsUnit       = "propcannon"
+local varRecAmount = GetConVar(gsUnit.."_maxrecamount")
+local varFireDelay = GetConVar(gsUnit.."_maxfiredelay")
+local varKillDelay = GetConVar(gsUnit.."_maxkilldelay")
+local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
+local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
+local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
+local varFireForce = GetConVar(gsUnit.."_maxfireforce")
 
 cleanup.Register(gsUnit.."s")
 
@@ -100,6 +107,10 @@ elseif(CLIENT) then
   list.Set("CannonModels","models/props_c17/oildrum001.mdl",{})
   list.Set("CannonModels","models/props_c17/canister01a.mdl",{})
   list.Set("CannonModels","models/props_c17/lampshade001a.mdl",{})
+  list.Set("CannonModels","models/props_junk/terracotta01.mdl",{})
+  list.Set("CannonModels","models/props_c17/pottery_large01a.mdl",{})
+  list.Set("CannonModels","models/props_wasteland/laundry_basket001.mdl",{})
+  list.Set("CannonModels","models/props_junk/PlasticCrate01a.mdl",{})
 
   list.Set("CannonAmmoModels","models/props_junk/propane_tank001a.mdl",{})
   list.Set("CannonAmmoModels","models/props_c17/canister_propane01a.mdl",{})
@@ -107,6 +118,9 @@ elseif(CLIENT) then
   list.Set("CannonAmmoModels","models/props_junk/cinderblock01a.mdl",{})
   list.Set("CannonAmmoModels","models/props_debris/concrete_cynderblock001.mdl",{})
   list.Set("CannonAmmoModels","models/props_junk/popcan01a.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/gascan001a.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/metalgascan.mdl",{})
+  list.Set("CannonAmmoModels","models/props_junk/PropaneCanister001a.mdl",{})
 
   -- https://wiki.facepunch.com/gmod/Effects
   table.Empty(list.GetForEdit("CannonEffects"))
@@ -125,16 +139,16 @@ elseif(CLIENT) then
 end
 
 TOOL.ClientConVar = {
-  ["keyaf"]            = 0,
-  ["keyfo"]            = 0,
+  ["keyaf"]            = 44,
+  ["keyfo"]            = 46,
   ["force"]            = 20000,
   ["delay"]            = 5,
   ["recoil"]           = 1,
   ["explosive"]        = 1,
   ["kill_delay"]       = 5,
-  ["ammo_model"]       = "models/props_junk/cinderblock01a.mdl",
+  ["ammo_model"]       = "models/props_junk/watermelon01.mdl",
   ["ammo_mass"]        = 120,
-  ["fire_effect"]      = "Explosion",
+  ["fire_effect"]      = "RPGShotDown",
   ["fire_direct"]      = "0,0,1",
   ["cannon_model"]     = "models/props_trainstation/trashcan_indoor001b.mdl",
   ["explosive_power"]  = 10,
@@ -203,14 +217,11 @@ end
 
 function TOOL:RightClick(tr)
   if(CLIENT) then return true end
-  local trEnt, trHit = tr.Entity, tr.Hit
-  if(not (trHit and
-         (trEnt and trEnt:IsValid()) and
-          trEnt:GetClass() == "prop_physics")) then return false end
-  local model = trEnt:GetModel()
+  local trEnt = tr.Entity; if(not tr.Hit) then return false end
+  if(not (trEnt and trEnt:IsValid())) then return false end
+  local model, ply = trEnt:GetModel(), self:GetOwner()
   if(not util.IsValidModel(model)) then return false end
-  local ply = self:GetOwner()
-  if(ply:KeyDown(IN_USE)) then
+  if(ply:KeyDown(IN_SPEED)) then
     ply:ConCommand(gsUnit.."_cannon_model "..model.."\n")
     notifyUser(ply, "Cannon: "..model.." !",  "UNDO")
   else
@@ -259,6 +270,7 @@ end
 local gtConvarList = TOOL:BuildConVarList()
 
 function TOOL.BuildCPanel(cp) local pItem
+  cp:ClearControls()
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
 
@@ -285,19 +297,19 @@ function TOOL.BuildCPanel(cp) local pItem
   pItem.NumPad2:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyfo"))
   cp:AddPanel(pItem)
 
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, 500000, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, varFireForce:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".force"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, 50000, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, varFireMass:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_mass"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, 50, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, varFireDelay:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 1, 10, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, varRecAmount:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".recoil"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, 30, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, varKillDelay:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".kill_delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, 200, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, varExpPower:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, 500, 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, varExpRadius:GetFloat(), 7)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
   pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
