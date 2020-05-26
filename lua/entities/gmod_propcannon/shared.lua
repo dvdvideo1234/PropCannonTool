@@ -37,8 +37,7 @@ function ENT:Print(...)
   local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))
   local sLin = "["..sD.."] "..sI.." > "..tostring(self)..":"
   if(varLogFile:GetBool()) then
-    local sDel = "\t"
-    local tData, nID = {...}, 1
+    local sDel, tData, nID = "\t", {...}, 1
     while(tData[nID]) do
       sLin, nID = sLin..sDel..tostring(tData[nID]), (nID + 1)
     end; file.Append(gsUnit.."_tool/system_log.txt", sLin.."\n")

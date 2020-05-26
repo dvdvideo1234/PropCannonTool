@@ -44,10 +44,11 @@ function ENT:Initialize()
       "KillDelay",
       "FireForce",
       "RecoilAmount",
-      "FireMass"
+      "FireMass",
+      "FireDirection"
     }, { "NORMAL", "NORMAL", "NORMAL", "STRING",
          "STRING", "NORMAL", "NORMAL", "NORMAL",
-         "NORMAL", "NORMAL", "NORMAL", "NORMAL" }, {
+         "NORMAL", "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
       "Fire a single prop while enabled",
       "Fire repeatedly until off (triggered)",
       "The time to pass before next shot",
@@ -59,7 +60,8 @@ function ENT:Initialize()
       "How much time does the bullet lives",
       "The force the bullet is fired with",
       "The amount of the recolil force",
-      "The amount of mass applied on the bullet"
+      "The amount of mass applied on the bullet",
+      "Direction the bullet follows when shot (local)"
     })
     WireLib.CreateSpecialOutputs(self, {
       "ReadyToFire",
@@ -144,23 +146,25 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
 end
 
 function ENT:WireRead(name)
+  if(not WireLib) then return nil end -- No wiremod
   if(not name) then return nil end; local info = self.Inputs
-  if(not istable(info)) then return nil end
-  if(not next(info)) then return nil end; info = info[name]
-  return (IsValid(info.Src) and info.Value or nil)
+  if(not istable(info)) then return nil end; info = info[name]
+  return (info and (IsValid(info.Src) and info.Value or nil) or nil)
 end
 
 function ENT:WireWrite(name, data)
-  if(not name) then return nil end
-  if(not data) then return nil end
-  if(WireLib) then
-    WireLib.TriggerOutput(self, name, data) end
+  if(not WireLib) then return self end
+  if(not name) then return self end
+  if(not data) then return self end
+  WireLib.TriggerOutput(self, name, data)
+  return self -- Coding effective API
 end
 
 function ENT:GetFireDirection()
-  local wdir = Vector(); wdir:Set(self.fireDirection)
-        wdir:Rotate(self:GetAngles())
-  return wdir
+  local sdir = Vector(); sdir:Set(self.fireDirection)
+  local wdir = self:WireRead("FireDirection")
+  if(wdir ~= nil) then sdir:Set(wdir) end
+  sdir:Rotate(self:GetAngles()); return sdir
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -168,13 +172,14 @@ function ENT:OnTakeDamage(dmginfo)
 end
 
 function ENT:FireEnable()
-  self.enabled, self.nextFire = true, CurTime()
-  if(WireLib) then self:WireWrite("AutoFiring", 1) end
+  self.enabled  = true
+  self.nextFire = CurTime()
+  self:WireWrite("AutoFiring", 1)
 end
 
 function ENT:FireDisable()
   self.enabled = false
-  if(WireLib) then self:WireWrite("AutoFiring", 0) end
+  self:WireWrite("AutoFiring", 0)
 end
 
 function ENT:CanFire()
@@ -182,46 +187,40 @@ function ENT:CanFire()
 end
 
 function ENT:Think() local wA, wO
-  if(WireLib) then
-    wA = self:WireRead("AutoFire")
-    wO = self:WireRead("FireOnce")
-  end
+  local wA = self:WireRead("AutoFire")
+  local wO = self:WireRead("FireOnce")
   if(self:CanFire()) then
-    if(wO) then
+    self:WireWrite("ReadyToFire", 1)
+    if(wO) then -- Blast only one bullet
       if(wO ~= 0) then self:FireOne() end
-    else
-      if(wA) then
+    else -- Request autofire state
+      if(wA) then -- Override by wire input (trigger toggled)
         if(wA ~= 0) then self.wenable = (not self.wenable) end
         if(self.wenable) then self:FireOne() end
-      else
+      else -- Wiremod is not installed use numpad events
         if(self.enabled) then self:FireOne() end
       end
     end
-    if(WireLib) then self:WireWrite("ReadyToFire", 1) end
-  else
-    if(WireLib) then self:WireWrite("ReadyToFire", 0) end
+  else -- Cannon is not ready to fire yet
+    self:WireWrite("ReadyToFire", 0)
   end
 end
 
 function ENT:FireOne()
   if(not self:CanFire()) then return end
   self:Print("ENT.FireOne: Start")
+
   -- Wiremod values used to store overriding values
-  local wfireDelay, wfireEffect, wfireModel, wfireExplosives
-  local wexplosiveRadius, wexplosivePower, wkillDelay
-  local wfireForce, wrecoilAmount, wfireMass
-  if(WireLib) then
-    wfireMass        = self:WireRead("FireMass")
-    wfireDelay       = self:WireRead("FireDelay")
-    wfireModel       = self:WireRead("FireModel")
-    wkillDelay       = self:WireRead("KillDelay")
-    wfireForce       = self:WireRead("FireForce")
-    wfireEffect      = self:WireRead("FireEffect")
-    wrecoilAmount    = self:WireRead("RecoilAmount")
-    wfireExplosives  = self:WireRead("FireExplosives")
-    wexplosivePower  = self:WireRead("ExplosivePower")
-    wexplosiveRadius = self:WireRead("ExplosiveRadius")
-  end
+  local wfireMass        = self:WireRead("FireMass")
+  local wfireDelay       = self:WireRead("FireDelay")
+  local wfireModel       = self:WireRead("FireModel")
+  local wkillDelay       = self:WireRead("KillDelay")
+  local wfireForce       = self:WireRead("FireForce")
+  local wfireEffect      = self:WireRead("FireEffect")
+  local wrecoilAmount    = self:WireRead("RecoilAmount")
+  local wfireExplosives  = self:WireRead("FireExplosives")
+  local wexplosivePower  = self:WireRead("ExplosivePower")
+  local wexplosiveRadius = self:WireRead("ExplosiveRadius")
 
   -- Genral values used for firing. Overrided by connected wire chips
   local fireMass = ((wfireMass and wfireMass > 0) and wfireMass or self.fireMass)
@@ -259,15 +258,12 @@ function ENT:FireOne()
   ent:SetAngles(self:GetAngles())
   ent:SetOwner(self) -- For collision and such.
   ent.Owner = self:GetPlayer() -- For kill crediting
-  if(fireExplosives) then
-    ent.explosive       = true
-    ent.exploded        = false
-    ent.explosiveRadius = explosiveRadius
-    ent.explosivePower  = explosivePower
-    self:Print("ENT.FireOne: Explosive")
-  end
-  if(killDelay > 0) then
-    ent.dietime = CurTime() + killDelay end
+  ent.exploded        = false            -- Not yet exploded
+  ent.explosive       = fireExplosives   -- Explosive props parameter flag
+  ent.explosiveRadius = explosiveRadius  -- Explosion radius
+  ent.explosivePower  = explosivePower   -- Explosion power
+  self:Print("ENT.FireOne: Explosive ["..tostring(fireExplosives).."]")
+  if(killDelay > 0) then ent.dietime = CurTime() + killDelay end
   ent:Spawn()
   ent:Activate()
   ent:SetRenderMode(RENDERMODE_TRANSALPHA)
@@ -285,11 +281,9 @@ function ENT:FireOne()
   uPhys:SetMass(fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
-  if(WireLib) then
-    self:WireWrite("Fired", 1)
-    self:WireWrite("LastBullet", ent)
-    self:WireWrite("Fired", 0)
-  end
+  self:WireWrite("Fired", 1)
+  self:WireWrite("LastBullet", ent)
+  self:WireWrite("Fired", 0)
   ent.Owner:AddCount("props", ent)
   ent.Owner:AddCleanup("props", ent)
   self:Print("ENT.FireOne: Success")
