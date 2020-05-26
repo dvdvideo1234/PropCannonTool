@@ -1,6 +1,6 @@
 --[[
   ~ Prop Cannon (server) ~
-  ~ Lexi ~
+  ~ lexi ~ Ported to Gmod 13 by dvd_video
 --]]
 
 AddCSLuaFile("shared.lua")

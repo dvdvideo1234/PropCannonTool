@@ -1,8 +1,10 @@
 --[[
   ~ Cannon Prop ~
-  ~ Lexi ~
+  ~ lexi ~ Ported to Gmod 13 by dvd_video
 --]]
+
 AddCSLuaFile("shared.lua")
+
 ENT.Type           = "anim"
 ENT.Base           = "base_anim"
 ENT.PrintName      = "Prop Cannon Projectile"
@@ -20,10 +22,6 @@ if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")
 end
 
-function ENT:GetConvar(nam)
-  return GetConVar(gsVarForm:format(gsUnit, tostring(nam)))
-end
-
 function ENT:WireRead(name)
   if(not WireLib) then return nil end -- No wiremod
   if(not name) then return nil end; local info = self.Inputs
@@ -32,14 +30,6 @@ function ENT:WireRead(name)
 end
 
 function ENT:Print(...)
-  if(not varLogFile) then
-    varLogFile = self:GetConvar("logfile"); if(not varLogFile) then return
-    else self:Print("ENT.Print: Variable {logfile}["..tostring(varLogFile:GetBool()).."]") end
-  end
-  if(not varLogUsed) then
-    varLogUsed = self:GetConvar("logused"); if(not varLogUsed) then return
-    else self:Print("ENT.Print: Variable {logused}["..tostring(varLogUsed:GetBool()).."]") end
-  end
   if(not varLogUsed:GetBool()) then return end
   local sD = os.date("%y-%m-%d").." "..os.date("%H:%M:%S")
   local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))

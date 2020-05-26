@@ -1,7 +1,8 @@
 --[[
   ~ Prop Cannon (shar'd) ~
-  ~ Lexi ~
+  ~ lexi ~ Ported to Gmod 13 by dvd_video
 --]]
+
 ENT.Type            = "anim"
 ENT.PrintName       = "Prop Cannon Gun"
 if (WireLib) then
@@ -16,16 +17,15 @@ ENT.Spawnable       = false
 ENT.AdminSpawnable  = false
 
 local gsUnit       = "propcannon"
-local pcnFvars     = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
-local varLogFile   = CreateConVar(gsUnit.."_logfile", 0, pcnFvars, "Enable logging in a file")
-local varLogUsed   = CreateConVar(gsUnit.."_logused", 0, pcnFvars, "Enable logging on error")
-local varRecAmount = CreateConVar(gsUnit.."_maxrecamount", 10, pcnFvars, "Maximum cannon fire recoil amount")
-local varFireDelay = CreateConVar(gsUnit.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
-local varKillDelay = CreateConVar(gsUnit.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay")
-local varExpPower  = CreateConVar(gsUnit.."_maxexppower" , 200, pcnFvars, "Maximum cannon bullet explosive power")
-local varExpRadius = CreateConVar(gsUnit.."_maxexpradius", 500, pcnFvars, "Maximum cannon bullet explosive radius")
-local varFireMass  = CreateConVar(gsUnit.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass")
-local varFireForce = CreateConVar(gsUnit.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force")
+local varLogFile   = GetConVar(gsUnit.."_logfile")
+local varLogUsed   = GetConVar(gsUnit.."_logused")
+local varRecAmount = GetConVar(gsUnit.."_maxrecamount")
+local varFireDelay = GetConVar(gsUnit.."_maxfiredelay")
+local varKillDelay = GetConVar(gsUnit.."_maxkilldelay")
+local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
+local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
+local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
+local varFireForce = GetConVar(gsUnit.."_maxfireforce")
 
 if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")

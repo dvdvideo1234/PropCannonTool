@@ -1,30 +1,25 @@
 --[[
   ~ Prop Cannons v2 ~
-  ~ lexi ~
+  ~ lexi ~ Ported to Gmod 13 by dvd_video
 --]]
 
 local gsUnit       = "propcannon"
-local varRecAmount = GetConVar(gsUnit.."_maxrecamount")
-local varFireDelay = GetConVar(gsUnit.."_maxfiredelay")
-local varKillDelay = GetConVar(gsUnit.."_maxkilldelay")
-local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
-local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
-local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
-local varFireForce = GetConVar(gsUnit.."_maxfireforce")
+local pcnFvars     = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
+local varLogFile   = CreateConVar(gsUnit.."_logfile", 0, pcnFvars, "Enable logging in a file")
+local varLogUsed   = CreateConVar(gsUnit.."_logused", 0, pcnFvars, "Enable logging on error")
+local varRecAmount = CreateConVar(gsUnit.."_maxrecamount", 10, pcnFvars, "Maximum cannon fire recoil amount")
+local varFireDelay = CreateConVar(gsUnit.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
+local varKillDelay = CreateConVar(gsUnit.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay")
+local varExpPower  = CreateConVar(gsUnit.."_maxexppower" , 200, pcnFvars, "Maximum cannon bullet explosive power")
+local varExpRadius = CreateConVar(gsUnit.."_maxexpradius", 500, pcnFvars, "Maximum cannon bullet explosive radius")
+local varFireMass  = CreateConVar(gsUnit.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass")
+local varFireForce = CreateConVar(gsUnit.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force")
 
 cleanup.Register(gsUnit.."s")
 
 if(SERVER) then
-  CreateConVar("sbox_max"..gsUnit.."s", 10, "The maximum number of prop cannon guns you can have out at one time.")
 
-  function getFireDirection(dir)
-    local bodir = string.Explode(",",dir)
-    local fivec = Vector()
-          fivec.x = (tonumber(bodir[1]) or 0)
-          fivec.y = (tonumber(bodir[2]) or 0)
-          fivec.z = (tonumber(bodir[3]) or 0)
-    return fivec
-  end
+  CreateConVar("sbox_max"..gsUnit.."s", 10, "The maximum number of prop cannon guns you can have out at one time.")
 
   function notifyUser(ply, msg, type, ...) -- Send notification to client that something happened
     ply:SendLua("GAMEMODE:AddNotify(\""..tostring(msg).."\", NOTIFY_"..tostring(type)..", 6)")
@@ -155,6 +150,15 @@ TOOL.ClientConVar = {
   ["explosive_radius"] = 200
 }
 
+function TOOL:GetFireDirection()
+  local sDir = self:GetClientInfo("fire_direct")
+  local tDir = (","):Explode(sDir)
+  local nX = (tonumber(tDir[1]) or 0)
+  local nY = (tonumber(tDir[2]) or 0)
+  local nZ = (tonumber(tDir[3]) or 0)
+  return Vector(nX, nY, nZ)
+end
+
 function TOOL:LeftClick(tr)
   if(not tr.Hit) then return false end
   local trEnt = tr.Entity
@@ -162,6 +166,7 @@ function TOOL:LeftClick(tr)
   elseif(CLIENT) then return true
   elseif(not util.IsValidPhysicsObject(trEnt, tr.PhysicsBone)) then return false end
   local ply       = self:GetOwner()
+  local direct    = self:GetFireDirection()
   local keyaf     = self:GetClientNumber("keyaf")
   local keyfo     = self:GetClientNumber("keyfo")
   local force     = self:GetClientNumber("force")
@@ -175,7 +180,6 @@ function TOOL:LeftClick(tr)
   local power     = self:GetClientNumber("explosive_power")
   local radius    = self:GetClientNumber("explosive_radius")
   local explosive = tobool(self:GetClientNumber("explosive"))
-  local direct    = getFireDirection(self:GetClientInfo("fire_direct"))
 
   if(not (util.IsValidModel(model) and
           util.IsValidProp (model) and
