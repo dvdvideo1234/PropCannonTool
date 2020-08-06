@@ -13,7 +13,6 @@ ENT.Contact        = "lexi@lexi.org.uk"   -- Email dvd_video@abv.bg
 ENT.Spawnable      = false
 ENT.AdminSpawnable = false
 
-local gsVarForm  = "%s_%s"
 local gsUnit     = "propcannon"
 local varLogFile = GetConVar(gsUnit.."_logfile")
 local varLogUsed = GetConVar(gsUnit.."_logused")

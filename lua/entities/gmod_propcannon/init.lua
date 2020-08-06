@@ -27,8 +27,29 @@ end
 function ENT:Initialize()
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
-  self:SetSolid  (SOLID_VPHYSICS)
-  self.nextFire = CurTime()
+  self:SetSolid(SOLID_VPHYSICS)
+
+  -- Initialize internals
+  self.nextFire        = CurTime()
+  self.effectDataClass = EffectData() -- Allocate effect data class
+  self.wenable         = false
+  self.enabled         = false
+  self.numpadID        = {}
+  self.numpadKeyAF     = 42
+  self.numpadKeyFO     = 42
+  self.fireForce       = 40000
+  self.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
+  self.fireModel       = "models/props_junk/cinderblock01a.mdl"
+  self.recoilAmount    = 0
+  self.fireDelay       = 5
+  self.killDelay       = 5
+  self.explosivePower  = 10
+  self.explosiveRadius = 200
+  self.fireEffect      = "Explosion"
+  self.fireExplosives  = true
+  self.fireMass        = 120 -- Mass with optimal distance for projectile
+  self.fireDirection   = Vector(0,0,1) -- Default UP
+
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
   if(WireLib) then
@@ -77,24 +98,6 @@ function ENT:Initialize()
   end
 end
 
-ENT.wenable         = false
-ENT.enabled         = false
-ENT.numpadID        = {}
-ENT.numpadKeyAF     = 42
-ENT.numpadKeyFO     = 42
-ENT.fireForce       = 40000
-ENT.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
-ENT.fireModel       = "models/props_junk/cinderblock01a.mdl"
-ENT.recoilAmount    = 0
-ENT.fireDelay       = 5
-ENT.killDelay       = 5
-ENT.explosivePower  = 10
-ENT.explosiveRadius = 200
-ENT.fireEffect      = "Explosion"
-ENT.fireExplosives  = true
-ENT.fireMass        = 120 -- Mass with optimal distance for projectile
-ENT.fireDirection   = Vector(0,0,1) -- Default UP
-
 function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel,
                    fireModel     , recoilAmount   , fireDelay      ,
                    killDelay     , explosivePower , explosiveRadius,
@@ -113,7 +116,7 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self:CallOnRemove(gsCall, numpadRemoveKeys, self.numpadID.AF, self.numpadID.FO)
   -- Polulate entity data slots wuth the player provided values
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
-  self.cannonModel     = tostring(cannonModel or ""); self:SetModel(self.cannonModel)
+  self.cannonModel     = tostring(cannonModel or self:GetModel())
   self.fireModel       = tostring(fireModel or "")
   self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, varRecAmount:GetFloat())
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, varFireDelay:GetFloat())
@@ -125,8 +128,7 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, varFireMass:GetFloat())
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
-  else self.fireDirection.z = 1 end -- Make sure length equal to 1
-  self.effectDataClass = EffectData() -- Allocate effect data class
+  else self.fireDirection.z = 1 end -- Make sure the fire direction length is equal to 1
   self:SetOverlayText("- Prop Cannon -"..
                       "\nNumpad Key AutoFire("..(self.enabled and "On" or "Off")..") : "..
                                                  math.Round(self.numpadKeyAF    , 0)..
@@ -260,8 +262,8 @@ function ENT:FireOne()
   ent.Owner = self:GetPlayer() -- For kill crediting
   ent.exploded        = false            -- Not yet exploded
   ent.explosive       = fireExplosives   -- Explosive props parameter flag
-  ent.explosiveRadius = explosiveRadius  -- Explosion radius
-  ent.explosivePower  = explosivePower   -- Explosion power
+  ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
+  ent.explosivePower  = explosivePower   -- Explosion blast power
   self:Print("ENT.FireOne: Explosive ["..tostring(fireExplosives).."]")
   if(killDelay > 0) then ent.dietime = CurTime() + killDelay end
   ent:Spawn()
@@ -277,7 +279,7 @@ function ENT:FireOne()
     self:Print("ENT.FireOne: Recoil")
   end -- Recoil. The cannon could conceivably work without a valid physics model.
   if(not (uPhys and uPhys:IsValid())) then -- The bullets can't though
-    self:Print("ENT.FireOne: Invalid physics for projectile !", iPhys, ent) return nil end
+    self:Print("ENT.FireOne: Invalid physics for projectile !", self, ent) return nil end
   uPhys:SetMass(fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
