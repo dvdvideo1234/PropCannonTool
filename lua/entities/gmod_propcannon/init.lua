@@ -16,10 +16,70 @@ local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
 local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
 local varFireForce = GetConVar(gsUnit.."_maxfireforce")
 
-local function numpadRemoveKeys(self, ...)
+function ENT:WireError(sM)
+  local tI = debug.getinfo(2)
+  local sM = tostring(sM or "")
+  local sN = tI and tI.name or "Incognito"
+  ErrorNoHalt(tostring(self).."."..sN..sM.."\n")
+  self:Remove() -- Remove the entity on wire error
+end
+
+function ENT:WireUnpackPortInfo(tP)
+  if(not WireLib) then return nil end
+  local sN, sT, sD = tP[1], tP[2], tP[3]
+  sN = ((sN ~= nil) and string.Trim(tostring(sN)) or nil)
+  sT = ((sT ~= nil) and string.Trim(tostring(sT)) or nil)
+  sD = ((sD ~= nil) and string.Trim(tostring(sD)) or nil)
+  return sN, sT, sD
+end
+
+function ENT:WireCreatePorts(sF, tP)
+  if(not WireLib) then return self end
+  local iD, tN, tT, tD = 1, {}, {}, {}
+  while(tP[iD]) do local sN, sT, sD = self:WireUnpackPortInfo(tP[iD])
+    if(not sN) then self:WireError("("..sF..")["..iD.."]: Name missing"); return self end
+    if(not sT) then self:WireError("("..sF..")["..iD.."]: Type missing"); return self end
+    if(not WireLib.DT[sT]) then self:WireError("("..sF..")["..iD.."]: Type invalid ["..sT.."]"); return self end
+    tN[iD], tT[iD], tD[iD] = sN, sT, sD; iD = (iD + 1) -- Call the provider
+  end; local bS, sE = pcall(WireLib[sF], self, tN, tT, tD)
+  if(not bS) then self:WireError("("..sF..")["..iD.."]: Error: "..sE); return self end
+  return self -- Coding effective API. Must always return reference to self
+end
+
+function ENT:WireIndexPort(sK, sN)
+  if(not WireLib) then return nil end
+  if(sN == nil) then self:WireError("("..sK.."): Name invalid"); return nil end
+  local tP, sP = self[sK], tostring(sN); tP = (tP and tP[sP] or nil)
+  if(tP == nil) then self:WireError("("..sK..")("..sP.."): Port missing"); return tP, sP end
+  return tP, sP -- Return the dedicated indexed wire I/O port and name
+end
+
+function ENT:WireRead(sN, bC)
+  if(not WireLib) then return nil end; local tP, sP = self:WireIndexPort("Inputs", sN)
+  if(tP == nil) then self:WireError("("..sP.."): Input missing"); return nil end
+  if(bC) then return (IsValid(tP.Src) and tP.Value or nil) end; return tP.Value
+end
+
+function ENT:WireWrite(sN, vD)
+  if(not WireLib) then return self end; local tP, sP = self:WireIndexPort("Outputs", sN)
+  if(tP == nil) then self:WireError("("..sP.."): Output missing"); return self end
+  WireLib.TriggerOutput(self, sP, vD); return self
+end
+
+function ENT:WireCreateInputs(...)
+  if(not WireLib) then return self end
+  return self:WireCreatePorts("CreateSpecialInputs", {...})
+end
+
+function ENT:WireCreateOutputs(...)
+  if(not WireLib) then return self end
+  return self:WireCreatePorts("CreateSpecialOutputs", {...})
+end
+
+function ENT:RemoveNumpad(...)
   local iD, tA = 1, {...}
   for iD = 1, # tA do sK = tostring(tA[iD])
-    self:Print("ENT.RemoveKeys("..iD.."): ["..sK.."]")
+    self:Print("ENT.RemoveNumpad("..iD.."): ["..sK.."]")
     numpad.Remove(tA[iD])
   end
 end
@@ -35,13 +95,13 @@ function ENT:Initialize()
   self.wenable         = false
   self.enabled         = false
   self.numpadID        = {}
-  self.numpadKeyAF     = 42
-  self.numpadKeyFO     = 42
+  self.numpadKeyAF     = 44
+  self.numpadKeyFO     = 46
   self.fireForce       = 40000
   self.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
   self.fireModel       = "models/props_junk/cinderblock01a.mdl"
   self.recoilAmount    = 0
-  self.fireDelay       = 5
+  self.fireDelay       = 1
   self.killDelay       = 5
   self.explosivePower  = 10
   self.explosiveRadius = 200
@@ -52,50 +112,28 @@ function ENT:Initialize()
 
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
-  if(WireLib) then
-    WireLib.CreateSpecialInputs(self,{
-      "FireOnce",
-      "AutoFire",
-      "FireDelay",
-      "FireEffect",
-      "FireModel",
-      "FireExplosives",
-      "ExplosiveRadius",
-      "ExplosivePower",
-      "KillDelay",
-      "FireForce",
-      "RecoilAmount",
-      "FireMass",
-      "FireDirection"
-    }, { "NORMAL", "NORMAL", "NORMAL", "STRING",
-         "STRING", "NORMAL", "NORMAL", "NORMAL",
-         "NORMAL", "NORMAL", "NORMAL", "NORMAL", "VECTOR" }, {
-      "Fire a single prop while enabled",
-      "Fire repeatedly until off (triggered)",
-      "The time to pass before next shot",
-      "Effect displayed when fired",
-      "Overrides the internal bullet model",
-      "Should it have explosive bullets",
-      "Explosive bullets blast radius",
-      "Explosive bullets blast power",
-      "How much time does the bullet lives",
-      "The force the bullet is fired with",
-      "The amount of the recolil force",
-      "The amount of mass applied on the bullet",
-      "Direction the bullet follows when shot (local)"
-    })
-    WireLib.CreateSpecialOutputs(self, {
-      "ReadyToFire",
-      "Fired",
-      "AutoFiring",
-      "LastBullet"
-    }, { "NORMAL", "NORMAL", "NORMAL", "ENTITY"} , {
-      "Is the cannon ready to fire again",
-      "Triggered every time the cannon fires",
-      "Is the cannon currently autofiring",
-      "The last prop that was fired"
-    })
-  end
+
+  self:WireCreateInputs(
+    {"FireOnce"       , "NORMAL", "Fire a single prop while enabled"           },
+    {"AutoFire"       , "NORMAL", "Trigger fire repeatedly until off"          },
+    {"FireDelay"      , "NORMAL", "The time to pass before next shot"          },
+    {"FireEffect"     , "STRING", "Effect displayed when fired"                },
+    {"FireModel"      , "STRING", "Overrides the internal bullet model"        },
+    {"FireExplosives" , "NORMAL", "Should it have explosive bullets"           },
+    {"ExplosiveRadius", "NORMAL", "Explosive bullets blast radius"             },
+    {"ExplosivePower" , "NORMAL", "Explosive bullets blast power"              },
+    {"KillDelay"      , "NORMAL", "How much time does the bullet lives"        },
+    {"FireForce"      , "NORMAL", "The force the bullet is fired with"         },
+    {"RecoilAmount"   , "NORMAL", "The amount of the recoil force"             },
+    {"FireMass"       , "NORMAL", "The amount of mass applied on the bullet"   },
+    {"FireDirection"  , "VECTOR", "The local direction that the bullet follows"}
+  ):WireCreateOutputs(
+    {"ReadyToFire", "NORMAL", "Is the cannon ready to fire again"    },
+    {"Fired"      , "NORMAL", "Triggered every time the cannon fires"},
+    {"AutoFiring" , "NORMAL", "Is the cannon currently autofiring"   },
+    {"LastBullet" , "ENTITY", "The last prop that was fired"         }
+  )
+
 end
 
 function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel,
@@ -113,7 +151,7 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self.numpadID.FO     = numpad.OnDown(ply, self.numpadKeyFO, gsUnit.."_FO", self)
   self:Print("ENT.Setup: Keys", self.numpadID.AF, self.numpadID.FO)
   self:RemoveCallOnRemove(gsCall)
-  self:CallOnRemove(gsCall, numpadRemoveKeys, self.numpadID.AF, self.numpadID.FO)
+  self:CallOnRemove(gsCall, self.RemoveNumpad, self.numpadID.AF, self.numpadID.FO)
   -- Polulate entity data slots wuth the player provided values
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
   self.cannonModel     = tostring(cannonModel or self:GetModel())
@@ -147,24 +185,9 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self:Print("ENT.Setup: Success")
 end
 
-function ENT:WireRead(name)
-  if(not WireLib) then return nil end -- No wiremod
-  if(not name) then return nil end; local info = self.Inputs
-  if(not istable(info)) then return nil end; info = info[name]
-  return (info and (IsValid(info.Src) and info.Value or nil) or nil)
-end
-
-function ENT:WireWrite(name, data)
-  if(not WireLib) then return self end
-  if(not name) then return self end
-  if(not data) then return self end
-  WireLib.TriggerOutput(self, name, data)
-  return self -- Coding effective API
-end
-
 function ENT:GetFireDirection()
   local sdir = Vector(); sdir:Set(self.fireDirection)
-  local wdir = self:WireRead("FireDirection")
+  local wdir = self:WireRead("FireDirection", true)
   if(wdir ~= nil) then sdir:Set(wdir) end
   sdir:Rotate(self:GetAngles()); return sdir
 end
@@ -188,9 +211,9 @@ function ENT:CanFire()
   return (self.nextFire <= CurTime())
 end
 
-function ENT:Think() local wA, wO
-  local wA = self:WireRead("AutoFire")
-  local wO = self:WireRead("FireOnce")
+function ENT:Think()
+  local wA = self:WireRead("AutoFire", true)
+  local wO = self:WireRead("FireOnce", true)
   if(self:CanFire()) then
     self:WireWrite("ReadyToFire", 1)
     if(wO) then -- Blast only one bullet
@@ -213,16 +236,16 @@ function ENT:FireOne()
   self:Print("ENT.FireOne: Start")
 
   -- Wiremod values used to store overriding values
-  local wfireMass        = self:WireRead("FireMass")
-  local wfireDelay       = self:WireRead("FireDelay")
-  local wfireModel       = self:WireRead("FireModel")
-  local wkillDelay       = self:WireRead("KillDelay")
-  local wfireForce       = self:WireRead("FireForce")
-  local wfireEffect      = self:WireRead("FireEffect")
-  local wrecoilAmount    = self:WireRead("RecoilAmount")
-  local wfireExplosives  = self:WireRead("FireExplosives")
-  local wexplosivePower  = self:WireRead("ExplosivePower")
-  local wexplosiveRadius = self:WireRead("ExplosiveRadius")
+  local wfireMass        = self:WireRead("FireMass", true)
+  local wfireDelay       = self:WireRead("FireDelay", true)
+  local wfireModel       = self:WireRead("FireModel", true)
+  local wkillDelay       = self:WireRead("KillDelay", true)
+  local wfireForce       = self:WireRead("FireForce", true)
+  local wfireEffect      = self:WireRead("FireEffect", true)
+  local wrecoilAmount    = self:WireRead("RecoilAmount", true)
+  local wfireExplosives  = self:WireRead("FireExplosives", true)
+  local wexplosivePower  = self:WireRead("ExplosivePower", true)
+  local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
 
   -- Genral values used for firing. Overrided by connected wire chips
   local fireMass = ((wfireMass and wfireMass > 0) and wfireMass or self.fireMass)

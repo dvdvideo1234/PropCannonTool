@@ -7,6 +7,7 @@ local gsUnit       = "propcannon"
 local pcnFvars     = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 local varLogFile   = CreateConVar(gsUnit.."_logfile", 0, pcnFvars, "Enable logging in a file")
 local varLogUsed   = CreateConVar(gsUnit.."_logused", 0, pcnFvars, "Enable logging on error")
+local varMenuDigit = CreateConVar(gsUnit.."_maxmenudigit", 5, pcnFvars, "Maximum precision digits for control panel")
 local varRecAmount = CreateConVar(gsUnit.."_maxrecamount", 10, pcnFvars, "Maximum cannon fire recoil amount")
 local varFireDelay = CreateConVar(gsUnit.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
 local varKillDelay = CreateConVar(gsUnit.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay")
@@ -28,8 +29,9 @@ if(SERVER) then
   end
 
   function MakeCannon(ply, pos, ang, keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
-    if (not ply:CheckLimit(gsUnit.."s")) then return false end
+    if (not ply:CheckLimit(gsUnit.."s")) then return nil end
     local eCannon = ents.Create("gmod_"..gsUnit)
+    if(not (eCannon and eCannon:IsValid())) then return nil end
     eCannon:SetPos(pos)
     eCannon:SetAngles(ang)
     eCannon:SetModel(model)
@@ -74,11 +76,11 @@ elseif(CLIENT) then
   language.Add("tool."..gsUnit..".delay_con"           , "Fire delay:")
   language.Add("tool."..gsUnit..".delay"               , "How many seconds after firing before the cannon can fire again")
   language.Add("tool."..gsUnit..".recoil_con"          , "Recoil:")
-  language.Add("tool."..gsUnit..".recoil"              , "How much to multiply the cannon's recoil by")
+  language.Add("tool."..gsUnit..".recoil"              , "How much larger the recoil force is compared to the fire force")
   language.Add("tool."..gsUnit..".kill_delay_con"      , "Prop lifetime:")
-  language.Add("tool."..gsUnit..".kill_delay"          , "How many seconds each fired prop will exist for after being fired (0 to last forever)")
+  language.Add("tool."..gsUnit..".kill_delay"          , "How many seconds each prop will exist for after being fired (0 to last forever)")
   language.Add("tool."..gsUnit..".explosive_power_con" , "Explosive power:")
-  language.Add("tool."..gsUnit..".explosive_power"     , "If the prop is set to explode, how much damage to do")
+  language.Add("tool."..gsUnit..".explosive_power"     , "If the prop is set to explode how much damage does it do")
   language.Add("tool."..gsUnit..".explosive_radius_con", "Explosive radius:")
   language.Add("tool."..gsUnit..".explosive_radius"    , "If the prop is set to explode, how big the explosion should be")
   language.Add("tool."..gsUnit..".explosive_con"       , "Explode on contact:")
@@ -276,14 +278,14 @@ end
 
 local gtConvarList = TOOL:BuildConVarList()
 
-function TOOL.BuildCPanel(cp) local pItem
+function TOOL.BuildCPanel(cp)
   cp:ClearControls()
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
-
+  local iDecm = math.Clamp(math.floor(varRecAmount:GetInt()), 0, 10)
   local pItem = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
-        pItem:AddOption("default", gtConvarList)
+        pItem:AddOption("Default", gtConvarList)
         for key, val in pairs(table.GetKeys(gtConvarList)) do
           pItem:AddConVar(val) end
   cp:AddItem(pItem)
@@ -304,19 +306,19 @@ function TOOL.BuildCPanel(cp) local pItem
   pItem.NumPad2:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyfo"))
   cp:AddPanel(pItem)
 
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, varFireForce:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, varFireForce:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".force"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, varFireMass:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, varFireMass:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_mass"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, varFireDelay:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, varFireDelay:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, varRecAmount:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, varRecAmount:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".recoil"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, varKillDelay:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, varKillDelay:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".kill_delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, varExpPower:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, varExpPower:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, varExpRadius:GetFloat(), 7)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, varExpRadius:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
   pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
