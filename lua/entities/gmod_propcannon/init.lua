@@ -5,6 +5,7 @@
 
 AddCSLuaFile("shared.lua")
 include("shared.lua")
+include("init_wire.lua")
 
 local gsUnit = "propcannon"
 local gsCall = gsUnit.."_numpad_keys"
@@ -15,66 +16,6 @@ local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
 local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
 local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
 local varFireForce = GetConVar(gsUnit.."_maxfireforce")
-
-function ENT:WireError(sM)
-  local tI = debug.getinfo(2)
-  local sM = tostring(sM or "")
-  local sN = tI and tI.name or "Incognito"
-  ErrorNoHalt(tostring(self).."."..sN..sM.."\n")
-  self:Remove() -- Remove the entity on wire error
-end
-
-function ENT:WireUnpackPortInfo(tP)
-  if(not WireLib) then return nil end
-  local sN, sT, sD = tP[1], tP[2], tP[3]
-  sN = ((sN ~= nil) and string.Trim(tostring(sN)) or nil)
-  sT = ((sT ~= nil) and string.Trim(tostring(sT)) or nil)
-  sD = ((sD ~= nil) and string.Trim(tostring(sD)) or nil)
-  return sN, sT, sD
-end
-
-function ENT:WireCreatePorts(sF, tP)
-  if(not WireLib) then return self end
-  local iD, tN, tT, tD = 1, {}, {}, {}
-  while(tP[iD]) do local sN, sT, sD = self:WireUnpackPortInfo(tP[iD])
-    if(not sN) then self:WireError("("..sF..")["..iD.."]: Name missing"); return self end
-    if(not sT) then self:WireError("("..sF..")["..iD.."]: Type missing"); return self end
-    if(not WireLib.DT[sT]) then self:WireError("("..sF..")["..iD.."]: Type invalid ["..sT.."]"); return self end
-    tN[iD], tT[iD], tD[iD] = sN, sT, sD; iD = (iD + 1) -- Call the provider
-  end; local bS, sE = pcall(WireLib[sF], self, tN, tT, tD)
-  if(not bS) then self:WireError("("..sF..")["..iD.."]: Error: "..sE); return self end
-  return self -- Coding effective API. Must always return reference to self
-end
-
-function ENT:WireIndexPort(sK, sN)
-  if(not WireLib) then return nil end
-  if(sN == nil) then self:WireError("("..sK.."): Name invalid"); return nil end
-  local tP, sP = self[sK], tostring(sN); tP = (tP and tP[sP] or nil)
-  if(tP == nil) then self:WireError("("..sK..")("..sP.."): Port missing"); return tP, sP end
-  return tP, sP -- Return the dedicated indexed wire I/O port and name
-end
-
-function ENT:WireRead(sN, bC)
-  if(not WireLib) then return nil end; local tP, sP = self:WireIndexPort("Inputs", sN)
-  if(tP == nil) then self:WireError("("..sP.."): Input missing"); return nil end
-  if(bC) then return (IsValid(tP.Src) and tP.Value or nil) end; return tP.Value
-end
-
-function ENT:WireWrite(sN, vD)
-  if(not WireLib) then return self end; local tP, sP = self:WireIndexPort("Outputs", sN)
-  if(tP == nil) then self:WireError("("..sP.."): Output missing"); return self end
-  WireLib.TriggerOutput(self, sP, vD); return self
-end
-
-function ENT:WireCreateInputs(...)
-  if(not WireLib) then return self end
-  return self:WireCreatePorts("CreateSpecialInputs", {...})
-end
-
-function ENT:WireCreateOutputs(...)
-  if(not WireLib) then return self end
-  return self:WireCreatePorts("CreateSpecialOutputs", {...})
-end
 
 function ENT:RemoveNumpad(...)
   local iD, tA = 1, {...}
@@ -216,15 +157,12 @@ function ENT:Think()
   local wO = self:WireRead("FireOnce", true)
   if(self:CanFire()) then
     self:WireWrite("ReadyToFire", 1)
-    if(wO) then -- Blast only one bullet
-      if(wO ~= 0) then self:FireOne() end
-    else -- Request autofire state
-      if(wA) then -- Override by wire input (trigger toggled)
-        if(wA ~= 0) then self.wenable = (not self.wenable) end
-        if(self.wenable) then self:FireOne() end
-      else -- Wiremod is not installed use numpad events
-        if(self.enabled) then self:FireOne() end
-      end
+    if(wO and wO ~= 0) then self:FireOne() end
+    if(wA) then -- Override by wire input (trigger toggled)
+      if(wA ~= 0) then self.wenable = (not self.wenable) end
+      if(self.wenable) then self:FireOne() end
+    else -- Wiremod is not installed use numpad events
+      if(self.enabled) then self:FireOne() end
     end
   else -- Cannon is not ready to fire yet
     self:WireWrite("ReadyToFire", 0)
@@ -317,17 +255,14 @@ end
 local function fireToggle(ply, ent)
   if(not (ent and ent:IsValid())) then return end
   if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
-  if(ent.enabled) then
-    ent:FireDisable()
-  else
-    ent:FireEnable()
-  end
+  if(ent.enabled) then ent:FireDisable() else ent:FireEnable() end
 end
 
 local function fireOne(pl, ent)
   if(not (ent and ent:IsValid())) then return end
   if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
-  ent:FireOne()
+  if(ent:WireRead("FireOnce", true)) then return end
+  if(ent:CanFire()) then ent:FireOne() end
 end
 
 numpad.Register(gsUnit.."_AF", fireToggle)
