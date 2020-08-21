@@ -5,7 +5,6 @@
 
 AddCSLuaFile("shared.lua")
 include("shared.lua")
-include("init_wire.lua")
 
 local gsUnit = "propcannon"
 local gsCall = gsUnit.."_numpad_keys"
@@ -117,12 +116,14 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
                       "\nFiring Direction : "  ..math.Round(self.fireDirection.x, 2)..", "..
                                                  math.Round(self.fireDirection.y, 2)..", "..
                                                  math.Round(self.fireDirection.z, 2)..
-                      "\nExplosive Radius : "  ..math.Round(self.explosiveRadius, 2)..
                       "\nBullet Weight : "     ..math.Round(self.fireMass       , 2)..
                       "\nFiring Effect : "     ..self.fireEffect..
                       "\nBullet Model : "      ..self.fireModel..
-                      "\nExplosive Power("    ..(self.fireExplosives and "On" or "Off").."): "..
-                                                 math.Round(self.explosivePower , 2))
+                      "\nBullet Lifetime : "   ..math.Round(self.killDelay      , 2)..
+                      "\nBullet Recoil : "     ..math.Round(self.recoilAmount   , 2)..
+                      "\nExplosive Radius : "  ..math.Round(self.explosiveRadius, 2)..
+                      "\nExplosive Power("     ..(self.fireExplosives and "On" or "Off").."): "..
+                                                  math.Round(self.explosivePower , 2))
   self:Print("ENT.Setup: Success")
 end
 

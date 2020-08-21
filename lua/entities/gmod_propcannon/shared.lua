@@ -27,6 +27,9 @@ local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
 local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
 local varFireForce = GetConVar(gsUnit.."_maxfireforce")
 
+AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
+include(gsUnit.."/wire_wrapper.lua")
+
 if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")
 end

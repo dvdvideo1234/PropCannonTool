@@ -36,38 +36,40 @@ local function wireSetupPorts(oE, sF, tI, bL)
   return oE -- Coding effective API. Must always return reference to self
 end
 
-function ENT:WireIndexPort(sK, sN)
+function ENT:WireIndex(sK, sN)
   if(not WireLib) then return nil end
   if(sN == nil) then wireError(self, "("..sK.."): Name invalid"); return nil end
   local tP, sP = self[sK], tostring(sN); tP = (tP and tP[sP] or nil)
   if(tP == nil) then wireError(self, "("..sK..")("..sP.."): Port missing"); return tP, sP end
-  return tP, sP -- Return the dedicated indexed wire I/O port and name
+  return tP, sP -- Returns the dedicated indexed wire I/O port and name
 end
 
 function ENT:WireDisconnect(sN)
-  if(not WireLib) then return nil end; local tP, sP = self:WireIndexPort("Outputs", sN)
+  if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Outputs", sN)
   if(tP == nil) then wireError(self, "("..sP.."): Output missing"); return self end
   WireLib.DisconnectOutput(self, sN); return self -- Disconnects the output
 end
 
 function ENT:WireIsConnected(sN)
-  if(not WireLib) then return nil end; local tP, sP = self:WireIndexPort("Inputs", sN)
+  if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Inputs", sN)
   if(tP == nil) then wireError(self, "("..sP.."): Input missing"); return nil end
   return IsValid(tP.Src) -- When the input exists and connected returns true
 end
 
 function ENT:WireRead(sN, bC)
-  if(not WireLib) then return nil end; local tP, sP = self:WireIndexPort("Inputs", sN)
+  if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Inputs", sN)
   if(tP == nil) then wireError(self, "("..sP.."): Input missing"); return nil end
   if(bC) then return (IsValid(tP.Src) and tP.Value or nil) end; return tP.Value
 end
 
 function ENT:WireWrite(sN, vD, bD)
-  if(not WireLib) then return self end; local tP, sP = self:WireIndexPort("Outputs", sN)
+  if(not WireLib) then return self end; local tP, sP = self:WireIndex("Outputs", sN)
   if(tP == nil) then wireError(self, "("..sP.."): Output missing"); return self end
-  if(bD) then local sD, tD = tP.Type, WireLib.DT
-    if(sD == nil) then wireError(self, "("..sP.."): Type missing"); return self end
-    if(tD[sD] == nil) then wireError(self, "("..sP..")("..sD.."): Type undefined"); return self end
+  if(bD) then
+    local sD = tP.Type; if(sD == nil) then
+      wireError(self, "("..sP.."): Type missing"); return self end
+    local tD = WireLib.DT[sD]; if(tD == nil) then
+      wireError(self, "("..sP..")("..sD.."): Type undefined"); return self end
     local sT, sZ = type(vD), type(tD.Zero); if(sT ~= sZ) then
       wireError(self, "("..sP..")("..sT.."~"..sZ.."): Type mismatch"); return self end
   end

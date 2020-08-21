@@ -17,28 +17,22 @@ local gsUnit     = "propcannon"
 local varLogFile = GetConVar(gsUnit.."_logfile")
 local varLogUsed = GetConVar(gsUnit.."_logused")
 
+AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
+include(gsUnit.."/wire_wrapper.lua")
+
 if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")
 end
 
-function ENT:WireRead(name)
-  if(not WireLib) then return nil end -- No wiremod
-  if(not name) then return nil end; local info = self.Inputs
-  if(not istable(info)) then return nil end; info = info[name]
-  return (info and (IsValid(info.Src) and info.Value or nil) or nil)
-end
-
 function ENT:Print(...)
-  if(not varLogUsed:GetBool()) then return end
+  if(not varLogUsed:GetBool()) then return end;
   local sD = os.date("%y-%m-%d").." "..os.date("%H:%M:%S")
   local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))
-  local sLin = "["..sD.."] "..sI.." > "..tostring(self)..":"
-  if(varLogFile:GetBool()) then
-    local sDel, tData, nID = "\t", {...}, 1
-    while(tData[nID]) do
-      sLin, nID = sLin..sDel..tostring(tData[nID]), (nID + 1)
-    end; file.Append(gsUnit.."_tool/system_log.txt", sLin.."\n")
-  else print(sLin,...) end
+  local sL = "["..sD.."] "..sI.." > "..tostring(self)..":"
+  if(varLogFile:GetBool()) then local sS, tD, iD = "\t", {...}, 1
+    while(tD[iD]) do sL, iD = sL..sS..tostring(tD[iD]), (iD + 1) end
+    file.Append(gsUnit.."_tool/system_log.txt", sL.."\n")
+  else print(sL, ...) end
 end
 
 if(CLIENT) then
@@ -57,7 +51,8 @@ function ENT:Initialize()
   self.exploded = false
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
-  WireLib.CreateSpecialInputs(self, {"Explode"}, {"NORMAL"}, {"Trigger this to force an explosion"})
+
+  self:WireCreateInputs({"Explode", "NORMAL", "Trigger this to create an explosion"})
   self:Print("ENT.Initialize: Success")
 end
 
@@ -107,8 +102,8 @@ function ENT:OnTakeDamage(dmgInfo)
 end
 
 function ENT:Think()
-  local wexp = self:WireRead("Explode")
-  if(wexp ~= nil and wexp ~= 0) then self:Explode() end
+  local wE = self:WireRead("Explode", true)
+  if(wE and wE ~= 0) then self:Explode() end
   if(not self.dietime) then return end
   if(self.die) then self:Remove()
   elseif(self.dietime <= CurTime()) then
