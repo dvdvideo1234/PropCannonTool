@@ -83,7 +83,7 @@ elseif(CLIENT) then
   language.Add("tool."..gsUnit..".explosive_power"     , "If the prop is set to explode how much damage does it do")
   language.Add("tool."..gsUnit..".explosive_radius_con", "Explosive radius:")
   language.Add("tool."..gsUnit..".explosive_radius"    , "If the prop is set to explode, how big the explosion should be")
-  language.Add("tool."..gsUnit..".explosive_con"       , "Explode on contact:")
+  language.Add("tool."..gsUnit..".explosive_con"       , "Explode ammunition on contact")
   language.Add("tool."..gsUnit..".explosive"           , "Should the fired props explode when they hit something")
   language.Add("tool."..gsUnit..".fire_effect_con"     , "Firing effect:")
   language.Add("tool."..gsUnit..".fire_effect"         , "The effect to play when the cannon fires")
@@ -126,13 +126,16 @@ elseif(CLIENT) then
   -- https://wiki.facepunch.com/gmod/Effects
   table.Empty(list.GetForEdit("CannonEffects"))
   list.Add("CannonEffects", {name = "Explosion"     , effect = "Explosion"})
-  list.Add("CannonEffects", {name = "Impact (RPG)"  , effect = "RPGShotDown"})
   list.Add("CannonEffects", {name = "Sparks"        , effect = "cball_explode"})
   list.Add("CannonEffects", {name = "Baloon PoP"    , effect = "balloon_pop"})
-  list.Add("CannonEffects", {name = "Manhack Sparks", effect = "ManhackSparks"})
+  list.Add("CannonEffects", {name = "Manhack Spark" , effect = "ManhackSparks"})
   list.Add("CannonEffects", {name = "Flash"         , effect = "HelicopterMegaBomb"})
   list.Add("CannonEffects", {name = "Machine Gun"   , effect = "HelicopterImpact"})
   list.Add("CannonEffects", {name = "Antlion Guts"  , effect = "AntlionGib"})
+  list.Add("CannonEffects", {name = "Airboat Gun"   , effect = "AirboatGunImpact"})
+  list.Add("CannonEffects", {name = "Impact RPG"    , effect = "RPGShotDown"})
+  list.Add("CannonEffects", {name = "Surface Hit"   , effect = "Impact"})
+  list.Add("CannonEffects", {name = "Blood Splat"   , effect = "BloodImpact"})
   list.Add("CannonEffects", {name = "None"          , effect = "none"})
 
   TOOL.Category = "Entities"
@@ -142,8 +145,8 @@ end
 TOOL.ClientConVar = {
   ["keyaf"]            = 44,
   ["keyfo"]            = 46,
-  ["force"]            = 20000,
-  ["delay"]            = 5,
+  ["force"]            = 70000,
+  ["delay"]            = 1,
   ["recoil"]           = 1,
   ["explosive"]        = 1,
   ["kill_delay"]       = 5,
@@ -286,8 +289,7 @@ function TOOL.BuildCPanel(cp)
   local pItem = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
         pItem:AddOption("Default", gtConvarList)
-        for key, val in pairs(table.GetKeys(gtConvarList)) do
-          pItem:AddConVar(val) end
+        for key, val in pairs(table.GetKeys(gtConvarList)) do pItem:AddConVar(val) end
   cp:AddItem(pItem)
 
   pItem = vgui.Create("PropSelect", cp)
@@ -320,6 +322,13 @@ function TOOL.BuildCPanel(cp)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
   pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, varExpRadius:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
+
+  pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
+  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".fire_effect"))
+  local tE = list.GetForEdit("CannonEffects")
+  for iE = 1, #tE do pItem:AddChoice(tE[iE].name, tE[iE].effect) end
+  cp:AddPanel(pItem)
+
   pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
 
@@ -329,9 +338,4 @@ function TOOL.BuildCPanel(cp)
   local tA = list.GetForEdit("CannonAmmoModels")
   for iA = 1, #tA do pItem:AddModel(tA[iA]) end
   cp:AddPanel(pItem)
-
-  pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".fire_effect"))
-  local tE = list.GetForEdit("CannonEffects")
-  for iE = 1, #tE do pItem:AddChoice(tE[iE].name, tE[iE].effect) end
 end

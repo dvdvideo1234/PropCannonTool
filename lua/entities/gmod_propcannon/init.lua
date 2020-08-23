@@ -256,13 +256,14 @@ end
 local function fireToggle(ply, ent)
   if(not (ent and ent:IsValid())) then return end
   if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
+  if(ent:WireIsConnected("AutoFire")) then return end
   if(ent.enabled) then ent:FireDisable() else ent:FireEnable() end
 end
 
 local function fireOne(pl, ent)
   if(not (ent and ent:IsValid())) then return end
   if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
-  if(ent:WireRead("FireOnce", true)) then return end
+  if(ent:WireIsConnected("FireOnce")) then return end
   if(ent:CanFire()) then ent:FireOne() end
 end
 

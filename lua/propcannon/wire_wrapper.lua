@@ -3,7 +3,7 @@ local function wireError(oE, sM)
   local sM = tostring(sM or "")
   local sN = tI and tI.name or "Incognito"
   local sO = tostring(oE).."."..sN..sM.."\n"
-  ErrorNoHalt(sO); oE:Remove()
+  oE:Print(sO); ErrorNoHalt(sO); oE:Remove()
 end
 
 local function wireUnpackPortInfo(tP)
