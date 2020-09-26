@@ -1,3 +1,8 @@
+--[[
+ * For override
+ * Defines what should happen when
+ * error in wire is found
+]]
 function ENT:WireError(sM)
   local tI = debug.getinfo(2)
   local sM = tostring(sM or "")
@@ -36,6 +41,11 @@ local function wireSetupPorts(oE, sF, tI, bL)
   return oE -- Coding effective API. Must always return reference to self
 end
 
+--[[
+ * Used to inder a wite port and return its data
+ * sK > Port key `Input` or `Output`
+ * sN > Port name must be string
+]]
 function ENT:WireIndex(sK, sN)
   if(not WireLib) then return nil end
   if(sN == nil) then self:WireError("("..sK.."): Name invalid"); return nil end
@@ -44,24 +54,78 @@ function ENT:WireIndex(sK, sN)
   return tP, sP -- Returns the dedicated indexed wire I/O port and name
 end
 
+--[[
+ * Used to forcefully disconnect an output
+ * sN > The output name to disconnect
+]]
 function ENT:WireDisconnect(sN)
   if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Outputs", sN)
   if(tP == nil) then self:WireError("("..sP.."): Output missing"); return self end
   WireLib.DisconnectOutput(self, sN); return self -- Disconnects the output
 end
 
+--[[
+ * Checks whenever a wire input is connected
+ * sN > Input name to check connection for
+]]
 function ENT:WireIsConnected(sN)
   if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Inputs", sN)
   if(tP == nil) then self:WireError("("..sP.."): Input missing"); return nil end
   return IsValid(tP.Src) -- When the input exists and connected returns true
 end
 
+--[[
+ * Removes wire abilities from an entity
+ * bU > Set to true if you want to remove ent from the list manually.
+        Set to false so it doesn't count as a wire able entity anymore
+]]
+function ENT:WireRemove(bU)
+  if(not WireLib) then return self end
+  WireLib.Remove(self, bU); return self
+end
+
+--[[
+ * Restores ports on a wire able entity
+ * bF > Only needed for existing components to allow them to be updated
+]]
+function ENT:WireRestored(bF)
+  if(not WireLib) then return self end
+  WireLib.Restored(self, bF); return self
+end
+
+--[[
+ * Builds duplicator needed wire information
+]]
+function ENT:WireDupeBuild()
+  if(not WireLib) then return self end
+  WireLib.BuildDupeInfo(self); return self
+end
+
+--[[
+ * Applies duplicator needed wire information
+]]
+function ENT:WireDupeApply()
+  if(not WireLib) then return self end
+  WireLib.ApplyDupeInfo(self); return self
+end
+
+--[[
+ * Reads a port of a wire able entity
+ * sN > The input name to read
+ * bC > Set to true to force a check if the input is connected
+]]
 function ENT:WireRead(sN, bC)
   if(not WireLib) then return nil end; local tP, sP = self:WireIndex("Inputs", sN)
   if(tP == nil) then self:WireError("("..sP.."): Input missing"); return nil end
   if(bC) then return (IsValid(tP.Src) and tP.Value or nil) end; return tP.Value
 end
 
+--[[
+ * Writes to a port of a wire able entity
+ * sN > The output name to write
+ * vD > The data to write
+ * bT > Set to true to force data type check
+]]
 function ENT:WireWrite(sN, vD, bT)
   if(not WireLib) then return self end; local tP, sP = self:WireIndex("Outputs", sN)
   if(tP == nil) then self:WireError("("..sP.."): Output missing"); return self end
