@@ -16,6 +16,8 @@ ENT.AdminSpawnable = false
 local gsUnit     = "propcannon"
 local varLogFile = GetConVar(gsUnit.."_logfile")
 local varLogUsed = GetConVar(gsUnit.."_logused")
+local gsFormHead = "[%s] %s > %s: "
+local gsFormItem = " {%s}"
 
 AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
 include(gsUnit.."/wire_wrapper.lua")
@@ -28,9 +30,11 @@ function ENT:Print(...)
   if(not varLogUsed:GetBool()) then return end;
   local sD = os.date("%y-%m-%d").." "..os.date("%H:%M:%S")
   local sI = (SERVER and "SERVER" or (CLIENT and "CLIENT" or "NOINST"))
-  local sL = "["..sD.."] "..sI.." > "..tostring(self)..":"
-  if(varLogFile:GetBool()) then local sS, tD, iD = "\t", {...}, 1
-    while(tD[iD]) do sL, iD = sL..sS..tostring(tD[iD]), (iD + 1) end
+  local sL = gsFormHead:format(sD, sI, tostring(self))
+  if(varLogFile:GetBool()) then local tD, iD = {...}, 1
+    sL = sL..tostring(tD[1]); iD = (iD + 1)
+    while(tD[iD]) do local sS = tostring(tD[iD])
+      sL, iD = sL..gsFormItem:format(sS), (iD + 1) end
     file.Append(gsUnit.."_tool/system_log.txt", sL.."\n")
   else print(sL, ...) end
 end

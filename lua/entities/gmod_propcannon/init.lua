@@ -84,29 +84,43 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   local ply = self:GetPlayer()
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)
   self.numpadKeyFO     = math.floor(tonumber(numpadKeyFO) or 0)
+  self:Print("ENT.Setup: Keys", self.numpadKeyAF, self.numpadKeyFO)
   -- Remove the previosky used numpad keys anf handle numpad crap
+  self:Print("ENT.Setup: KeysID", self.numpadID.AF, self.numpadID.FO)
   if(self.numpadID.AF) then numpad.Remove(self.numpadID.AF) end
   if(self.numpadID.FO) then numpad.Remove(self.numpadID.FO) end
   self.numpadID.AF     = numpad.OnDown(ply, self.numpadKeyAF, gsUnit.."_AF", self)
   self.numpadID.FO     = numpad.OnDown(ply, self.numpadKeyFO, gsUnit.."_FO", self)
-  self:Print("ENT.Setup: Keys", self.numpadID.AF, self.numpadID.FO)
+  self:Print("ENT.Setup: KeysID", self.numpadID.AF, self.numpadID.FO)
   self:RemoveCallOnRemove(gsCall)
   self:CallOnRemove(gsCall, self.RemoveNumpad, self.numpadID.AF, self.numpadID.FO)
   -- Polulate entity data slots wuth the player provided values
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
+  self:Print("ENT.Setup: fireForce", self.fireForce)
   self.cannonModel     = tostring(cannonModel or self:GetModel())
+  self:Print("ENT.Setup: cannonModel", self.cannonModel)
   self.fireModel       = tostring(fireModel or "")
+  self:Print("ENT.Setup: fireModel", self.fireModel)
   self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, varRecAmount:GetFloat())
+  self:Print("ENT.Setup: recoilAmount", self.recoilAmount)
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, varFireDelay:GetFloat())
+  self:Print("ENT.Setup: fireDelay", self.fireDelay)
   self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, varKillDelay:GetFloat())
+  self:Print("ENT.Setup: killDelay", self.killDelay)
   self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, varExpPower:GetFloat())
+  self:Print("ENT.Setup: explosivePower", self.explosivePower)
   self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, varExpRadius:GetFloat())
+  self:Print("ENT.Setup: explosiveRadius", self.explosiveRadius)
   self.fireEffect      = tostring(fireEffect or "")
+  self:Print("ENT.Setup: fireEffect", self.fireEffect)
   self.fireExplosives  = tobool(fireExplosives)
+  self:Print("ENT.Setup: fireExplosives", self.fireExplosives)
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, varFireMass:GetFloat())
+  self:Print("ENT.Setup: fireMass", self.fireMass)
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
   else self.fireDirection.z = 1 end -- Make sure the fire direction length is equal to 1
+  self:Print("ENT.Setup: fireDirection", self.fireDirection)
   self:SetOverlayText("- Prop Cannon -"..
                       "\nNumpad Key AutoFire("..(self.enabled and "On" or "Off")..") : "..
                                                  math.Round(self.numpadKeyAF    , 0)..
