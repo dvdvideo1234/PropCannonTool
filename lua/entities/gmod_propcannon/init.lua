@@ -118,7 +118,8 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, varFireMass:GetFloat())
   self:Print("ENT.Setup: fireMass", self.fireMass)
   self.fireDirection:Set(fireDirection)
-  if(self.fireDirection:Length() > 0) then self.fireDirection:Normalize()
+  if(self.fireDirection:LengthSqr() > 0) then -- The user or constructor can pass any value
+    self.fireDirection:Normalize() -- Normalize the vector when there is some length
   else self.fireDirection.z = 1 end -- Make sure the fire direction length is equal to 1
   self:Print("ENT.Setup: fireDirection", self.fireDirection)
   self:SetOverlayText("- Prop Cannon -"..
@@ -142,10 +143,15 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
 end
 
 function ENT:GetFireDirection()
+  local sang = self:GetAngles()
   local sdir = Vector(); sdir:Set(self.fireDirection)
   local wdir = self:WireRead("FireDirection", true)
-  if(wdir ~= nil) then sdir:Set(wdir) end
-  sdir:Rotate(self:GetAngles()); return sdir
+  if(wdir ~= nil) then sdir:Set(wdir)
+    if(sdir:LengthSqr() > 0) then -- Wire input can pass any value
+      sdir:Normalize() -- Normalize the vector when there is some length
+    else sdir.z = 1 end -- Make sure the fire direction length is equal to 1
+  end -- Forcing sane direction on the prop cannon
+  sdir:Rotate(sang); return sdir
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -221,7 +227,7 @@ function ENT:FireOne()
     eff:SetStart(pos)
     eff:SetScale(1)
     util.Effect(fireEffect, eff)
-    self:Print("ENT.FireOne: Effects", "["..fireEffect.."]")
+    self:Print("ENT.FireOne: Effects", fireEffect)
   end
   local ent = ents.Create("cannon_prop")
   if(not (ent and ent:IsValid())) then
@@ -240,25 +246,23 @@ function ENT:FireOne()
   ent.explosive       = fireExplosives   -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power
-  self:Print("ENT.FireOne: Explosive ["..tostring(fireExplosives).."]")
+  self:Print("ENT.FireOne: Explosive", fireExplosives)
   if(killDelay > 0) then ent.dietime = CurTime() + killDelay end
   ent:Spawn()
   ent:Activate()
   ent:SetRenderMode(RENDERMODE_TRANSALPHA)
   ent:DrawShadow(true)
   ent:PhysWake()
-  local iPhys = self:GetPhysicsObject()
-  local uPhys =  ent:GetPhysicsObject()
-  if(iPhys and iPhys:IsValid()) then
-    reco = dir * -fireForce * recoilAmount
-    iPhys:ApplyForceCenter(reco)
-    self:Print("ENT.FireOne: Recoil")
-  end -- Recoil. The cannon could conceivably work without a valid physics model.
+  local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
   if(not (uPhys and uPhys:IsValid())) then -- The bullets can't though
     self:Print("ENT.FireOne: Invalid physics for projectile !", self, ent) return nil end
   uPhys:SetMass(fireMass)
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
+  if(iPhys and iPhys:IsValid() and recoilAmount > 0) then
+    iPhys:ApplyForceCenter(dir * -fireForce * recoilAmount)
+    self:Print("ENT.FireOne: Recoil")
+  end -- Recoil. The cannon could conceivably work without a valid physics model.
   self:WireWrite("Fired", 1)
   self:WireWrite("LastBullet", ent)
   self:WireWrite("Fired", 0)
