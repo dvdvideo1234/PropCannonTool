@@ -143,15 +143,14 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
 end
 
 function ENT:GetFireDirection()
-  local sang = self:GetAngles()
-  local sdir = Vector(); sdir:Set(self.fireDirection)
+  local sang, sdir = self:GetAngles(), Vector()
   local wdir = self:WireRead("FireDirection", true)
-  if(wdir ~= nil) then sdir:Set(wdir)
+  sdir:Set(self.fireDirection) -- Read the internal direction
+  if(wdir ~= nil) then sdir:Set(wdir) -- Override using wire
     if(sdir:LengthSqr() > 0) then -- Wire input can pass any value
       sdir:Normalize() -- Normalize the vector when there is some length
     else sdir.z = 1 end -- Make sure the fire direction length is equal to 1
-  end -- Forcing sane direction on the prop cannon
-  sdir:Rotate(sang); return sdir
+  end; sdir:Rotate(sang); return sdir -- Forcing sane direction on the prop cannon
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -190,6 +189,11 @@ function ENT:Think()
   end
 end
 
+function ENT:GetCase(bC, vT, vF)
+  if(bC) then return vT end -- True condition
+  return vF -- Return the false condition value
+end
+
 function ENT:FireOne()
   if(not self:CanFire()) then return end
   self:Print("ENT.FireOne: Start")
@@ -207,16 +211,16 @@ function ENT:FireOne()
   local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
 
   -- Genral values used for firing. Overrided by connected wire chips
-  local fireMass = ((wfireMass and wfireMass > 0) and wfireMass or self.fireMass)
-  local fireDelay = ((wfireDelay and wfireDelay >= 0) and wfireDelay or self.fireDelay)
-  local fireModel = ((wfireModel and util.IsValidModel(wfireModel)) and wfireModel or self.fireModel)
-  local killDelay = ((wkillDelay and wkillDelay >= 0) and wkillDelay or self.killDelay)
-  local fireForce = ((wfireForce and wfireForce >= 0) and wfireForce or self.fireForce)
-  local fireEffect = ((wfireEffect and (wfireEffect ~= "")) and wfireEffect or self.fireEffect)
-  local recoilAmount = ((wrecoilAmount and wrecoilAmount >= 0) and wrecoilAmount or self.recoilAmount)
-  local fireExplosives = self.fireExplosives; if(wfireExplosives) then fireExplosives = tobool(wfireExplosives) end
-  local explosivePower = ((wexplosivePower and wexplosivePower >= 0) and wexplosivePower or self.explosivePower)
-  local explosiveRadius = ((wexplosiveRadius and wexplosiveRadius >= 0) and wexplosiveRadius or self.explosiveRadius)
+  local fireMass        = self:GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
+  local fireDelay       = self:GetCase(wfireDelay       ~= nil and wfireDelay       >  0, wfireDelay             , self.fireDelay)
+  local fireModel       = self:GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
+  local killDelay       = self:GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
+  local fireForce       = self:GetCase(wfireForce       ~= nil and wfireForce       >= 0, wfireForce             , self.fireForce)
+  local fireEffect      = self:GetCase(wfireEffect      ~= nil                          , wfireEffect            , self.fireEffect)
+  local recoilAmount    = self:GetCase(wrecoilAmount    ~= nil and wrecoilAmount    >= 0, wrecoilAmount          , self.recoilAmount)
+  local fireExplosives  = self:GetCase(wfireExplosives  ~= nil                          , tobool(wfireExplosives), self.fireExplosives)
+  local explosivePower  = self:GetCase(wexplosivePower  ~= nil and wexplosivePower  >= 0, wexplosivePower        , self.explosivePower)
+  local explosiveRadius = self:GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
 
   self.nextFire = (CurTime() + fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
@@ -260,7 +264,7 @@ function ENT:FireOne()
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
   if(iPhys and iPhys:IsValid() and recoilAmount > 0) then
-    iPhys:ApplyForceCenter(dir * -fireForce * recoilAmount)
+    iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount))
     self:Print("ENT.FireOne: Recoil")
   end -- Recoil. The cannon could conceivably work without a valid physics model.
   self:WireWrite("Fired", 1)

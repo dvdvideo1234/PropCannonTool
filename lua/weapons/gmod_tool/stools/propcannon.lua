@@ -64,7 +64,7 @@ elseif(CLIENT) then
   language.Add("tool."..gsUnit..".right"               , "Select the trace model to be used as ammo")
   language.Add("tool."..gsUnit..".right_use"           , "Select the trace model to be used as cannon")
   language.Add("tool."..gsUnit..".reload"              , "Removes the prop cannon")
-  language.Add("tool."..gsUnit..".name"                , "Prop cannon")
+  language.Add("tool."..gsUnit..".name"                , "Prop Cannon")
   language.Add("tool."..gsUnit..".desc"                , "A movable cannon that can fire props")
   language.Add("tool."..gsUnit..".0"                   , "Click to spawn a cannon. Click on an existing cannon to change it. Right click on a prop to use the model as ammo.")
   language.Add("tool."..gsUnit..".cannon_model_con"    , "Cannon model:")
@@ -138,7 +138,7 @@ elseif(CLIENT) then
   list.Add("CannonEffects", {name = "Blood Splat"   , effect = "BloodImpact"})
   list.Add("CannonEffects", {name = "None"          , effect = "none"})
 
-  TOOL.Category = "Entities"
+  TOOL.Category = "Construction"
   TOOL.Name     = language.GetPhrase("tool."..gsUnit..".name")
 end
 
