@@ -9,7 +9,7 @@ support for the prop cannon tool. I fixed it and improved it because I had so go
 Clone this repo in your addons folder or subscribe to it at the [workshop here][ref-ws].
 
 ### Bug reports
-If there is something wron with the addon dont fix it but please inform me via the issue sistem!
+If there is something wrong with the addon don't fix it but rather please inform me via the issue system!
 
 ### How to use
 Just weld it to a prop or spawn it on the map. When `Autofire toggle` is active the cannon will
@@ -30,6 +30,6 @@ values from the cannon will be used. For example the valid value for the billet 
 ![PropCannonTool][ref-screen]
 
 [ref-iif]: https://en.wikipedia.org/wiki/If_and_only_if
-[ref-screen]: https://raw.githubusercontent.com/dvdvideo1234/PropCannonTool/master/data/pictures/screenshot.jpg
+[ref-screen]: https://raw.githubusercontent.com/dvdvideo1234/PropCannonTool/master/data/propcannon/tools/pictures/screenshot.jpg
 [ref-ws]: https://steamcommunity.com/sharedfiles/filedetails/?id=286474801
 [ref-lexi]: https://github.com/Lexicality
