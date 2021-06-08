@@ -24,6 +24,18 @@ function ENT:RemoveNumpad(...)
   end
 end
 
+function ENT:PreEntityCopy()
+  self:WirePreEntityCopy()
+end
+
+function ENT:PostEntityPaste(ply, ent, created)
+  self:WirePostEntityPaste(ply, ent, created)
+end
+
+function ENT:ApplyDupeInfo(ply, ent, info, fentid)
+  self:WireApplyDupeInfo(ply, ent, info, fentid)
+end
+
 function ENT:Initialize()
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)

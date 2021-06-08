@@ -75,8 +75,9 @@ function ENT:WireIsConnected(sN)
 end
 
 --[[
- * Removes wire abilities from an entity
- * bU > Set to true if you want to remove ent from the list manually.
+ * Procedure. Removes wire abilities from an entity
+ * bU > Set to true if you want to remove ent from the list and
+            if you want to call `WireLib._RemoveWire(eid)` manually.
         Set to false so it doesn't count as a wire able entity anymore
 ]]
 function ENT:WireRemove(bU)
@@ -85,7 +86,7 @@ function ENT:WireRemove(bU)
 end
 
 --[[
- * Restores ports on a wire able entity
+ * Procedure. Restores ports on a wire able entity
  * bF > Only needed for existing components to allow them to be updated
 ]]
 function ENT:WireRestored(bF)
@@ -95,18 +96,68 @@ end
 
 --[[
  * Builds duplicator needed wire information
+ * Function. Returns the built dupe information
 ]]
-function ENT:WireDupeBuild()
-  if(not WireLib) then return self end
-  WireLib.BuildDupeInfo(self); return self
+function ENT:WireBuildDupeInfo()
+  if(not WireLib) then return end
+  return WireLib.BuildDupeInfo(self)
 end
 
 --[[
- * Applies duplicator needed wire information
+ * Procedure. Applies duplicator needed wire information
+ * Does not return anything. It is prcedure
+ * ply    > Player to store the info for
+ * ent    > Entity to store the info for
+ * info   > Information table to apply
+ * fentid > Pointer to function retrieving entity by ID
+ * Usage: function ENT:ApplyDupeInfo(ply, ent, info, fentid)
+            self:WireApplyDupeInfo(ply, ent, info, fentid) end
 ]]
-function ENT:WireDupeApply()
+function ENT:WireApplyDupeInfo(ply, ent, info, fentid)
   if(not WireLib) then return self end
-  WireLib.ApplyDupeInfo(self); return self
+  WireLib.ApplyDupeInfo(ply, ent, info, fentid)
+  return self
+end
+
+--[[
+ * Procedure. Must be run inside `ENT:PreEntityCopy`
+ * Makes wire do the pre-copy preparation for dupe info
+ * Usage: function ENT:PreEntityCopy()
+            self:WirePreEntityCopy() end
+]]
+function ENT:WirePreEntityCopy()
+  if(not WireLib) then return self end
+  duplicator.StoreEntityModifier(
+    self, "WireDupeInfo", self:WireBuildDupeInfo())
+  return self
+end
+
+--[[
+ * Function. Helper routine for `WirePostEntityPaste`
+ * Returns wire specific and related entity picker
+]]
+local function EntityLookup(created)
+  return function(id, default)
+    if(id == nil) then return default
+    elseif(id == 0) then return game.GetWorld() end
+    local ent = created[id] or (isnumber(id) and ents.GetByIndex(id))
+    if(IsValid(ent)) then return ent else return default end
+  end
+end
+
+--[[
+ * Procedure. Must be run inside `ENT:PostEntityPaste`
+ * Makes wire do the post-paste preparation for dupe info
+ * Usage: function ENT:PostEntityPaste(ply, ent, created)
+            self:WirePostEntityPaste(ply, ent, created) end
+]]
+function ENT:WirePostEntityPaste(ply, ent, created)
+  if(not WireLib) then return self end
+  if(not ent.EntityMods) then return self end
+  if(not ent.EntityMods.WireDupeInfo) then return self end
+  self:WireApplyDupeInfo(ply, ent,
+    ent.EntityMods.WireDupeInfo, EntityLookup(created))
+  return self
 end
 
 --[[
@@ -162,10 +213,10 @@ end
 
 function ENT:WireRetypeInputs(...)
   if(not WireLib) then return self end
-  return wireSetupPorts("RetypeInputs", {...}, true)
+  return wireSetupPorts(self, "RetypeInputs", {...}, true)
 end
 
 function ENT:WireRetypeOutputs(...)
   if(not WireLib) then return self end
-  return wireSetupPorts("RetypeOutputs", {...}, true)
+  return wireSetupPorts(self, "RetypeOutputs", {...}, true)
 end

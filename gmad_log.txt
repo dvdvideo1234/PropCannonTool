@@ -1,6 +1,0 @@
-2021-01-10 16:01:19.34
-
-https://github.com/dvdvideo1234/PropCannonTool/commit/5874c8b92ba10036c8b78c67527206b2a2de14c5
- 
-Updated: Images being relevant to current version
-
