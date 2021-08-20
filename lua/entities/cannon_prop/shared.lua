@@ -45,7 +45,6 @@ if(CLIENT) then
 end
 
 function ENT:Initialize()
-  self:Print("ENT.Initialize: Start")
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
   self:SetSolid(SOLID_VPHYSICS)
@@ -57,7 +56,6 @@ function ENT:Initialize()
   if(phys and phys:IsValid()) then phys:Wake() end
 
   self:WireCreateInputs({"Explode", "NORMAL", "Trigger this to create an explosion"})
-  self:Print("ENT.Initialize: Success")
 end
 
 hook.Add("EntityTakeDamage", gsUnit.."_crediting",
@@ -69,7 +67,6 @@ hook.Add("EntityTakeDamage", gsUnit.."_crediting",
 
 function ENT:Explode(dmgInfo)
   if(self.exploded) then return end
-  self:Print("ENT.Explode: Start")
   -- Make sure we set the explode flag here, otherwise recursion
   -- will take place in `OnTakeDamage` and the game will crash !
   self.exploded = true -- The `exploded` flag is right where it needs to be
@@ -82,7 +79,7 @@ function ENT:Explode(dmgInfo)
     eff:SetStart(pos)
     eff:SetOrigin(pos)
     eff:SetScale(1)
-    util.Effect("Explosion", eff)
+    util.Effect("Explosion", eff, true, true)
   end
   if(self and self:IsValid() and util.IsInWorld(pos) and
      own and own:IsValid() and rad > 0 and pow > 0)
@@ -92,12 +89,10 @@ function ENT:Explode(dmgInfo)
     else -- When there is no damage information present
       util.BlastDamage(self, own, pos, rad, pow)
     end
-    self:Print("ENT.Explode: Blast conditions OK", dmgInfo)
   else
     self:Print("ENT.Explode: Blast conditions not met !")
   end
   self:Remove()
-  self:Print("ENT.Explode: Success")
 end
 
 function ENT:OnTakeDamage(dmgInfo)
