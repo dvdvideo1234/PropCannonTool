@@ -14,6 +14,7 @@ This addon can give you the ability to have your own movable cannon that fires p
  [*] Logging is available ( turn off by default )
  [*] Ability to update a cannon with left click entity class
  [*] Maximum value control setup tweaks are available
+ [*] Supports custom bullet entity class. Resets on empty string
 [/list]
 
 For detailed manual, please refer to readme.md
