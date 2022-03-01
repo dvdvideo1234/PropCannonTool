@@ -70,6 +70,7 @@ function ENT:Initialize()
     {"FireDelay"      , "NORMAL", "The time to pass before next shot"          },
     {"FireEffect"     , "STRING", "Effect displayed when fired"                },
     {"FireModel"      , "STRING", "Overrides the internal bullet model"        },
+    {"FireClass"      , "STRING", "Overrides the internal bullet class"        },
     {"FireExplosives" , "NORMAL", "Should it have explosive bullets"           },
     {"ExplosiveRadius", "NORMAL", "Explosive bullets blast radius"             },
     {"ExplosivePower" , "NORMAL", "Explosive bullets blast power"              },
@@ -87,10 +88,10 @@ function ENT:Initialize()
 
 end
 
-function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel,
-                   fireModel     , recoilAmount   , fireDelay      ,
-                   killDelay     , explosivePower , explosiveRadius,
-                   fireEffect    , fireExplosives , fireDirection  , fireMass)
+function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      ,
+                   cannonModel   , fireModel      , recoilAmount   ,
+                   fireDelay     , killDelay      , explosivePower , explosiveRadius,
+                   fireEffect    , fireExplosives , fireDirection  , fireMass, fireClass)
   local ply = self:GetPlayer()
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)
   self.numpadKeyFO     = math.floor(tonumber(numpadKeyFO) or 0)
@@ -105,6 +106,8 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
   self.cannonModel     = tostring(cannonModel or self:GetModel())
   self.fireModel       = tostring(fireModel or "")
+  self.fireClass       = tostring(fireClass or "cannon_prop")
+  if(self.fireClass == "") then self.fireClass = "cannon_prop" end
   self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, varRecAmount:GetFloat())
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, varFireDelay:GetFloat())
   self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, varKillDelay:GetFloat())
@@ -129,6 +132,7 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      , cannonModel
                       "\nBullet Weight : "     ..math.Round(self.fireMass       , 2)..
                       "\nFiring Effect : "     ..self.fireEffect..
                       "\nBullet Model : "      ..self.fireModel..
+                      "\nBullet Class : "      ..self.fireClass..
                       "\nBullet Lifetime : "   ..math.Round(self.killDelay      , 2)..
                       "\nBullet Recoil : "     ..math.Round(self.recoilAmount   , 2)..
                       "\nExplosive Radius : "  ..math.Round(self.explosiveRadius, 2)..
@@ -190,9 +194,9 @@ end
 
 function ENT:FireOne()
   if(not self:CanFire()) then return end
-
   -- Wiremod values used to store overriding values
   local wfireMass        = self:WireRead("FireMass", true)
+  local wfireClass       = self:WireRead("FireClass", true)
   local wfireDelay       = self:WireRead("FireDelay", true)
   local wfireModel       = self:WireRead("FireModel", true)
   local wkillDelay       = self:WireRead("KillDelay", true)
@@ -202,9 +206,9 @@ function ENT:FireOne()
   local wfireExplosives  = self:WireRead("FireExplosives", true)
   local wexplosivePower  = self:WireRead("ExplosivePower", true)
   local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
-
-  -- Genral values used for firing. Overrided by connected wire chips
+  -- Genral values used for shooting. Overrided by connected wire chips
   local fireMass        = self:GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
+  local fireClass       = self:GetCase(wfireClass       ~= nil and wfireClass      ~= "", wfireClass             , self.fireClass)
   local fireDelay       = self:GetCase(wfireDelay       ~= nil and wfireDelay       >  0, wfireDelay             , self.fireDelay)
   local fireModel       = self:GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
   local killDelay       = self:GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
@@ -214,19 +218,17 @@ function ENT:FireOne()
   local fireExplosives  = self:GetCase(wfireExplosives  ~= nil                          , tobool(wfireExplosives), self.fireExplosives)
   local explosivePower  = self:GetCase(wexplosivePower  ~= nil and wexplosivePower  >= 0, wexplosivePower        , self.explosivePower)
   local explosiveRadius = self:GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
-
+  -- Apply the general shoot trigger logic and bullet configuration
   self.nextFire = (CurTime() + fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
   local dir = self:GetFireDirection()
   local eff = self.effectDataClass
   if(fireEffect ~= "" and fireEffect ~= "none") then
-    eff:SetOrigin(pos)
-    eff:SetStart(pos)
-    eff:SetScale(1)
+    eff:SetOrigin(pos); eff:SetStart(pos); eff:SetScale(1)
     util.Effect(fireEffect, eff, true, true)
   end
-  local ent = ents.Create("cannon_prop")
-  if(not (ent and ent:IsValid())) then return nil end
+  local ent = ents.Create(fireClass)
+  if(not (ent and ent:IsValid())) then return end
   self:DeleteOnRemove(ent)
   ent:SetCollisionGroup(COLLISION_GROUP_NONE)
   ent:SetSolid(SOLID_VPHYSICS)
@@ -241,20 +243,28 @@ function ENT:FireOne()
   ent.explosive       = fireExplosives   -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power
-  if(killDelay > 0) then ent.dietime = CurTime() + killDelay end
+  if(killDelay > 0) then
+    local dietime = CurTime() + killDelay
+    local timekey = gsUnit.."_"..ent:EntIndex()
+    timer.Create(timekey, 0, 0, function()
+      if(CurTime() >= dietime) then timer.Remove(timekey)
+        if(IsValid(ent)) then ent:Fire("break"); ent:Remove() end
+      end -- Valid entity references are removed when available
+    end) -- Otherwise the entity as exploded and reference is NULL
+  end -- The timer is removed no matter if the entity is present or not
   ent:Spawn()
   ent:Activate()
   ent:SetRenderMode(RENDERMODE_TRANSALPHA)
   ent:DrawShadow(true)
   ent:PhysWake()
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
-  if(not (uPhys and uPhys:IsValid())) then --[[ The bullets can't though ]] return nil end
-  uPhys:SetMass(fireMass)
-  uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Start the bullet off going like we be.
+  if(not (uPhys and uPhys:IsValid())) then return end -- Invalid bullet physics
+  uPhys:SetMass(fireMass) -- Apply bullet mass. Requires valid bullet
+  uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Apply relative velocity
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
-  if(iPhys and iPhys:IsValid() and recoilAmount > 0) then
-    iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount))
-  end -- Recoil. The cannon could conceivably work without a valid physics model.
+  if(iPhys and iPhys:IsValid() and recoilAmount > 0) then -- Valid cannon  physics
+    iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) -- Recoil amount
+  end -- Recoil. The cannon could work without a valid physics model.
   self:WireWrite("Fired", 1)
   self:WireWrite("LastBullet", ent)
   self:WireWrite("Fired", 0)

@@ -28,8 +28,11 @@ if(SERVER) then
     return ...
   end
 
-  function MakeCannon(ply, pos, ang, keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
-    if (not ply:CheckLimit(gsUnit.."s")) then return nil end
+  function MakeCannon(ply   , pos   , ang   , keyaf ,
+                      keyfo , force , model , ammo  ,
+                      recoil, delay , kill  , power ,
+                      radius, effect, doboom, direct, ammoms, ammoty)
+    if(not ply:CheckLimit(gsUnit.."s")) then return nil end
     local eCannon = ents.Create("gmod_"..gsUnit)
     if(not (eCannon and eCannon:IsValid())) then return nil end
     eCannon:SetPos(pos)
@@ -41,15 +44,18 @@ if(SERVER) then
     eCannon:SetRenderMode(RENDERMODE_TRANSALPHA)
     eCannon:SetColor(Color(0, 0, 0, 255))
     eCannon:SetCollisionGroup(COLLISION_GROUP_WORLD)
-    eCannon:Setup(keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+    eCannon:Setup(keyaf , keyfo , force , model ,
+                  ammo  , recoil, delay , kill  ,
+                  power , radius, effect, doboom, direct, ammoms, ammoty)
     ply:AddCount(gsUnit.."s", eCannon)
     return eCannon
   end
 
   duplicator.RegisterEntityClass( "gmod_"..gsUnit, MakeCannon, "Pos", "Ang",
-       "numpadKeyAF" , "numpadKeyFO" , "fireForce" , "cannonModel"   , "fireModel"     ,
-       "recoilAmount", "fireDelay"   , "killDelay" , "explosivePower",
-       "explosiveRadius", "fireEffect", "fireExplosives", "fireDirection" , "fireMass")
+       "numpadKeyAF"   , "numpadKeyFO"    , "fireForce" , "cannonModel"    ,
+       "fireModel"     , "recoilAmount"   , "fireDelay" , "killDelay"      ,
+       "explosivePower", "explosiveRadius", "fireEffect", "fireExplosives" ,
+       "fireDirection" , "fireMass"       , "fireClass")
 
 elseif(CLIENT) then
   TOOL.Information = {
@@ -61,8 +67,8 @@ elseif(CLIENT) then
   }
   language.Add("tool."..gsUnit..".1"                   , "Manipulates a movable cannon that can fire props")
   language.Add("tool."..gsUnit..".left"                , "Creates a cannon. Weld to the trace when prop is hit")
-  language.Add("tool."..gsUnit..".right"               , "Select the trace model to be used as ammo")
-  language.Add("tool."..gsUnit..".right_use"           , "Select the trace model to be used as cannon")
+  language.Add("tool."..gsUnit..".right"               , "Use trace model as ammo. Hold SHIFT to use as cannon model")
+  language.Add("tool."..gsUnit..".right_use"           , "Use trace class as ammo type. Hit world to reset default")
   language.Add("tool."..gsUnit..".reload"              , "Removes the prop cannon")
   language.Add("tool."..gsUnit..".name"                , "Prop Cannon")
   language.Add("tool."..gsUnit..".desc"                , "A movable cannon that can fire props")
@@ -152,6 +158,7 @@ TOOL.ClientConVar = {
   ["kill_delay"]       = 5,
   ["ammo_model"]       = "models/props_junk/watermelon01.mdl",
   ["ammo_mass"]        = 120,
+  ["ammo_type"]        = "cannon_prop",
   ["fire_effect"]      = "RPGShotDown",
   ["fire_direct"]      = "0,0,1",
   ["cannon_model"]     = "models/props_trainstation/trashcan_indoor001b.mdl",
@@ -174,21 +181,22 @@ function TOOL:LeftClick(tr)
   local trEnt, trBone = tr.Entity, tr.PhysicsBone
   if(trEnt and trEnt:IsPlayer()) then return false end
   if(not util.IsValidPhysicsObject(trEnt, trBone)) then return false end
-  local ply       = self:GetOwner()
-  local direct    = self:GetFireDirection()
-  local keyaf     = self:GetClientNumber("keyaf")
-  local keyfo     = self:GetClientNumber("keyfo")
-  local force     = self:GetClientNumber("force")
-  local delay     = self:GetClientNumber("delay")
-  local recoil    = self:GetClientNumber("recoil")
-  local kill      = self:GetClientNumber("kill_delay")
-  local ammo      = self:GetClientInfo  ("ammo_model")
-  local ammoms    = self:GetClientNumber("ammo_mass")
-  local effect    = self:GetClientInfo  ("fire_effect")
-  local model     = self:GetClientInfo  ("cannon_model")
-  local power     = self:GetClientNumber("explosive_power")
-  local radius    = self:GetClientNumber("explosive_radius")
-  local explosive = tobool(self:GetClientNumber("explosive"))
+  local ply    = self:GetOwner()
+  local direct = self:GetFireDirection()
+  local keyaf  = self:GetClientNumber("keyaf")
+  local keyfo  = self:GetClientNumber("keyfo")
+  local force  = self:GetClientNumber("force")
+  local delay  = self:GetClientNumber("delay")
+  local recoil = self:GetClientNumber("recoil")
+  local kill   = self:GetClientNumber("kill_delay")
+  local ammo   = self:GetClientInfo  ("ammo_model")
+  local ammoms = self:GetClientNumber("ammo_mass")
+  local ammoty = self:GetClientInfo  ("ammo_type")
+  local effect = self:GetClientInfo  ("fire_effect")
+  local model  = self:GetClientInfo  ("cannon_model")
+  local power  = self:GetClientNumber("explosive_power")
+  local radius = self:GetClientNumber("explosive_radius")
+  local doboom = tobool(self:GetClientNumber("explosive"))
 
   if(not (util.IsValidModel(model) and
           util.IsValidProp (model) and
@@ -197,14 +205,19 @@ function TOOL:LeftClick(tr)
 
   if(trEnt and trEnt:IsValid() and
      trEnt:GetClass()  == "gmod_"..gsUnit and trEnt:GetPlayer() == ply) then -- Do not update other people stuff
-     trEnt:Setup(keyaf, keyfo, force, nil, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+     trEnt:Setup(keyaf , keyfo , force , nil ,
+                 ammo  , recoil, delay , kill,
+                 power , radius, effect, doboom, direct, ammoms, ammoty)
     return true -- Note about the model: ^- Automatically polulated to avoid difference in visuals and collisions
   end
 
   local ang = tr.HitNormal:Angle()
         ang.pitch = ang.pitch + 90
 
-  local eCannon = MakeCannon(ply, tr.HitPos, ang, keyaf, keyfo, force, model, ammo, recoil, delay, kill, power, radius, effect, explosive, direct, ammoms)
+  local eCannon = MakeCannon(ply   , tr.HitPos, ang   , keyaf ,
+                             keyfo , force    , model , ammo  ,
+                             recoil, delay    , kill  , power ,
+                             radius, effect   , doboom, direct, ammoms, ammoty)
   if(not (eCannon and eCannon:IsValid())) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
@@ -229,16 +242,29 @@ end
 
 function TOOL:RightClick(tr)
   if(CLIENT) then return true end
-  local trEnt = tr.Entity; if(not tr.Hit) then return false end
-  if(not (trEnt and trEnt:IsValid())) then return false end
-  local model, ply = trEnt:GetModel(), self:GetOwner()
-  if(not util.IsValidModel(model)) then return false end
-  if(ply:KeyDown(IN_SPEED)) then
-    ply:ConCommand(gsUnit.."_cannon_model "..model.."\n")
-    notifyUser(ply, "Cannon: "..model.." !",  "UNDO")
+  local trEnt = tr.Entity
+  local ply = self:GetOwner()
+  if(not tr.Hit) then return false end
+  if(tr.HitWorld) then
+    ply:ConCommand(gsUnit.."_ammo_type \"\"\n")
+    notifyUser(ply, "Ammo type clear !",  "UNDO"); return true
   else
-    ply:ConCommand(gsUnit.."_ammo_model "..model.."\n")
-    notifyUser(ply, "Ammo: "..model.." !",  "UNDO")
+    if(not (trEnt and trEnt:IsValid())) then return false end
+    if(ply:KeyDown(IN_SPEED)) then
+      local amod = trEnt:GetModel()
+      if(not util.IsValidModel(amod)) then return false end
+      ply:ConCommand(gsUnit.."_cannon_model "..amod.."\n")
+      notifyUser(ply, "Cannon: ["..amod.."] !",  "UNDO"); return true
+    elseif(ply:KeyDown(IN_USE)) then
+      local atyp = trEnt:GetClass()
+      ply:ConCommand(gsUnit.."_ammo_type "..atyp.."\n")
+      notifyUser(ply, "Ammo type ["..atyp.."] !",  "UNDO"); return true
+    else
+      local amod = trEnt:GetModel()
+      if(not util.IsValidModel(amod)) then return false end
+      ply:ConCommand(gsUnit.."_ammo_model "..amod.."\n")
+      notifyUser(ply, "Ammo: ["..amod.."] !",  "UNDO"); return true
+    end; return false
   end
 end
 
@@ -268,12 +294,11 @@ function TOOL:UpdateGhost(ent, ply) --( ent, player )
 end
 
 function TOOL:Think()
-  if (SERVER and !game.SinglePlayer()) then return end
-  if (CLIENT and  game.SinglePlayer()) then return end
+  if(CLIENT and game.SinglePlayer()) then return end
+  if(SERVER and not game.SinglePlayer()) then return end
   local model = string.lower(self:GetClientInfo("cannon_model"))
   local ghEnt = self.GhostEntity
-  if(not (ghEnt and
-          ghEnt:IsValid() and
+  if(not (ghEnt and ghEnt:IsValid() and
           ghEnt:GetModel() == model)) then
     self:MakeGhostEntity(model, Vector(), Angle())
   end; self:UpdateGhost(ghEnt, self:GetOwner())

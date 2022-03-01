@@ -103,11 +103,6 @@ end
 function ENT:Think()
   local wE = self:WireRead("Explode", true)
   if(wE and wE ~= 0) then self:Explode() end
-  if(not self.dietime) then return end
-  if(self.die) then self:Remove()
-  elseif(self.dietime <= CurTime()) then
-    self:Fire("break"); self.die = true
-  end
 end
 
 local function doBoom(self)
