@@ -35,6 +35,24 @@ function ENT:ApplyDupeInfo(ply, ent, info, fentid)
   self:WireApplyDupeInfo(ply, ent, info, fentid)
 end
 
+local tOther = {
+  "IsPlayer" , "IsVehicle", "IsNPC"   ,
+  "IsRagdoll", "IsWeapon" , "IsWidget"
+}; tOther.Size = #tOther
+
+function ENT:IsOther(ent)
+  if(not ent) then return true end
+  if(not IsValid(ent))  then return true end
+  for idx = 1, tOther.Size do -- Integer for loop
+    local nam = tOther[idx] -- Retrieve method name
+    local src = ent[nam]    -- Index entity method
+    if(src) then local s, v = pcall(src, ent)
+      if(not s) then ent:Remove() end
+      if(v) then ent:Remove() return true end
+    else ent:Remove() return true end
+  end; return false
+end
+
 function ENT:Initialize()
   self:PhysicsInit(SOLID_VPHYSICS)
   self:SetMoveType(MOVETYPE_VPHYSICS)
@@ -228,7 +246,7 @@ function ENT:FireOne()
     util.Effect(fireEffect, eff, true, true)
   end
   local ent = ents.Create(fireClass)
-  if(not (ent and ent:IsValid())) then return end
+  if(self:IsOther(ent)) then return end
   self:DeleteOnRemove(ent)
   ent:SetCollisionGroup(COLLISION_GROUP_NONE)
   ent:SetSolid(SOLID_VPHYSICS)
@@ -237,9 +255,10 @@ function ENT:FireOne()
   ent:SetModel(fireModel)
   ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
   ent:SetAngles(self:GetAngles())
-  ent:SetOwner(self) -- For collision and such.
-  ent.Owner = self:GetPlayer() -- For kill crediting
-  ent.exploded        = false            -- Not yet exploded
+  ent:SetOwner(self) -- Used for bullets fired by their owner
+  ent.Owner = self:GetPlayer() -- For prop protection and ownership addons
+  ent.owner = self:GetPlayer() -- For prop protection and ownership addons
+  ent.exploded        = false            -- Prevents bullet infinite recursion
   ent.explosive       = fireExplosives   -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power

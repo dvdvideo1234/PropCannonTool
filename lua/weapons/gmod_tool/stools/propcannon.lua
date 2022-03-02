@@ -208,7 +208,7 @@ function TOOL:LeftClick(tr)
      trEnt:Setup(keyaf , keyfo , force , nil ,
                  ammo  , recoil, delay , kill,
                  power , radius, effect, doboom, direct, ammoms, ammoty)
-    return true -- Note about the model: ^- Automatically polulated to avoid difference in visuals and collisions
+    return true -- Model automatically polulated to avoid difference in visuals and collisions
   end
 
   local ang = tr.HitNormal:Angle()
@@ -306,12 +306,13 @@ end
 
 local gtConvarList = TOOL:BuildConVarList()
 
+-- Enter `spawnmenu_reload` in the console to reload the panel
 function TOOL.BuildCPanel(cp)
   cp:ClearControls()
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
   local iDecm = math.Clamp(math.floor(varMenuDigit:GetInt()), 0, 10)
-  local pItem = vgui.Create("ControlPresets", cp)
+  local pItem, pProp = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
         pItem:AddOption("Default", gtConvarList)
         for key, val in pairs(table.GetKeys(gtConvarList)) do pItem:AddConVar(val) end
@@ -357,10 +358,16 @@ function TOOL.BuildCPanel(cp)
   pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
 
-  pItem = vgui.Create("PropSelect", cp)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_model"))
-  pItem:ControlValues({convar = gsUnit.."_ammo_model", label = language.GetPhrase("tool."..gsUnit..".ammo_model_con")})
+  pProp = vgui.Create("PropSelect", cp)
+  pProp:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_model"))
+  pProp:ControlValues({label = language.GetPhrase("tool."..gsUnit..".ammo_model_con")})
   local tA = list.GetForEdit("CannonAmmoModels")
-  for iA = 1, #tA do pItem:AddModel(tA[iA]) end
-  cp:AddPanel(pItem)
+  for iA = 1, #tA do
+    local pIcon = pProp:AddModel(tA[iA])
+    function pIcon:DoClick() local ply = LocalPlayer()
+      ply:ConCommand(gsUnit.."_ammo_type \"\"\n")
+      ply:ConCommand(gsUnit.."_ammo_model \""..self.Model.."\"\n")
+    end
+  end
+  cp:AddPanel(pProp)
 end
