@@ -24,7 +24,7 @@ the wire port value is not in the desired bounds or it is invalid, the internal 
 values from the cannon will be used. For example the valid value for the billet mass
 `fireMass` is positive, so negatives including `0` are considered invalid.
 ```lua
-  local fireMass = self:GetCase(wfireMass ~= nil and wfireMass > 0, wfireMass, self.fireMass)
+  local fireMass = PCannonLib.GetCase(wfireMass ~= nil and wfireMass > 0, wfireMass, self.fireMass)
 ```
 
 ![PropCannonTool][ref-screen]

@@ -25,6 +25,11 @@ local tOther = {
   "IsRagdoll", "IsWeapon" , "IsWidget"
 }; tOther.Size = #tOther
 
+function PCannonLib.GetCase(bC, vT, vF)
+  if(bC) then return vT end -- True condition
+  return vF -- Return the false condition value
+end
+
 function PCannonLib.GetUnit(s, e)
   local s = tostring(s or "")
   local e = tostring(e or "")

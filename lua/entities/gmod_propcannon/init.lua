@@ -6,7 +6,7 @@
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
-local gsBull = "cannon_prop"
+local gsBucs = "cannon_prop"
 local gsUnit = PCannonLib.GetUnit()
 local gsCall = PCannonLib.GetUnit(nil, "_numpad_keys")
 
@@ -100,8 +100,8 @@ function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
   -- Polulate entity data slots wuth the player provided values
   self.cannonModel     = tostring(cannonModel or self:GetModel())
   self.fireModel       = tostring(fireModel or "")
-  self.fireClass       = tostring(fireClass or gsBull)
-  if(self.fireClass == "") then self.fireClass = gsBull end
+  self.fireClass       = tostring(fireClass or gsBucs)
+  if(self.fireClass == "") then self.fireClass = gsBucs end
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, PCannonLib.FIREMASS:GetFloat())
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, PCannonLib.FIREFORCE:GetFloat())
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, PCannonLib.FIREDELAY:GetFloat())
@@ -180,15 +180,10 @@ function ENT:Think()
   end
 end
 
-function ENT:GetCase(bC, vT, vF)
-  if(bC) then return vT end -- True condition
-  return vF -- Return the false condition value
-end
-
 function ENT:BulletArm(ent)
   if(ent and ent:IsValid()) then
     local css = ent:GetClass()
-    if(gsBull == css) then return end
+    if(gsBucs == css) then return end
     local ply = self:GetPlayer()
     local exp = ent.explosive
     if(not exp) then return end
@@ -237,17 +232,17 @@ function ENT:FireOne()
   local wexplosivePower  = self:WireRead("ExplosivePower", true)
   local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
   -- Genral values used for shooting. Overrided by connected wire chips
-  local fireMass        = self:GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
-  local fireClass       = self:GetCase(wfireClass       ~= nil and wfireClass      ~= "", wfireClass             , self.fireClass)
-  local fireDelay       = self:GetCase(wfireDelay       ~= nil and wfireDelay       >  0, wfireDelay             , self.fireDelay)
-  local fireModel       = self:GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
-  local killDelay       = self:GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
-  local fireForce       = self:GetCase(wfireForce       ~= nil and wfireForce       >= 0, wfireForce             , self.fireForce)
-  local fireEffect      = self:GetCase(wfireEffect      ~= nil                          , wfireEffect            , self.fireEffect)
-  local recoilAmount    = self:GetCase(wrecoilAmount    ~= nil and wrecoilAmount    >= 0, wrecoilAmount          , self.recoilAmount)
-  local fireExplosives  = self:GetCase(wfireExplosives  ~= nil                          , tobool(wfireExplosives), self.fireExplosives)
-  local explosivePower  = self:GetCase(wexplosivePower  ~= nil and wexplosivePower  >= 0, wexplosivePower        , self.explosivePower)
-  local explosiveRadius = self:GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
+  local fireMass        = PCannonLib.GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
+  local fireClass       = PCannonLib.GetCase(wfireClass       ~= nil and wfireClass      ~= "", wfireClass             , self.fireClass)
+  local fireDelay       = PCannonLib.GetCase(wfireDelay       ~= nil and wfireDelay       >  0, wfireDelay             , self.fireDelay)
+  local fireModel       = PCannonLib.GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
+  local killDelay       = PCannonLib.GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
+  local fireForce       = PCannonLib.GetCase(wfireForce       ~= nil and wfireForce       >= 0, wfireForce             , self.fireForce)
+  local fireEffect      = PCannonLib.GetCase(wfireEffect      ~= nil                          , wfireEffect            , self.fireEffect)
+  local recoilAmount    = PCannonLib.GetCase(wrecoilAmount    ~= nil and wrecoilAmount    >= 0, wrecoilAmount          , self.recoilAmount)
+  local fireExplosives  = PCannonLib.GetCase(wfireExplosives  ~= nil                          , tobool(wfireExplosives), self.fireExplosives)
+  local explosivePower  = PCannonLib.GetCase(wexplosivePower  ~= nil and wexplosivePower  >= 0, wexplosivePower        , self.explosivePower)
+  local explosiveRadius = PCannonLib.GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
   -- Apply the general shoot trigger logic and bullet configuration
   self.nextFire = (CurTime() + fireDelay)
   local pos = self:LocalToWorld(self:OBBCenter())
