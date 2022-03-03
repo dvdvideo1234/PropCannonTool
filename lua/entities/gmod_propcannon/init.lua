@@ -6,15 +6,9 @@
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
-local gsUnit = "propcannon"
-local gsCall = gsUnit.."_numpad_keys"
-local varRecAmount = GetConVar(gsUnit.."_maxrecamount")
-local varFireDelay = GetConVar(gsUnit.."_maxfiredelay")
-local varKillDelay = GetConVar(gsUnit.."_maxkilldelay")
-local varExpPower  = GetConVar(gsUnit.."_maxexppower" )
-local varExpRadius = GetConVar(gsUnit.."_maxexpradius")
-local varFireMass  = GetConVar(gsUnit.."_maxfiremass" )
-local varFireForce = GetConVar(gsUnit.."_maxfireforce")
+local gsBull = "cannon_prop"
+local gsUnit = PCannonLib.GetUnit()
+local gsCall = PCannonLib.GetUnit(nil, "_numpad_keys")
 
 function ENT:RemoveNumpad(...)
   local iD, tA = 1, {...}
@@ -33,24 +27,6 @@ end
 
 function ENT:ApplyDupeInfo(ply, ent, info, fentid)
   self:WireApplyDupeInfo(ply, ent, info, fentid)
-end
-
-local tOther = {
-  "IsPlayer" , "IsVehicle", "IsNPC"   ,
-  "IsRagdoll", "IsWeapon" , "IsWidget"
-}; tOther.Size = #tOther
-
-function ENT:IsOther(ent)
-  if(not ent) then return true end
-  if(not IsValid(ent))  then return true end
-  for idx = 1, tOther.Size do -- Integer for loop
-    local nam = tOther[idx] -- Retrieve method name
-    local src = ent[nam]    -- Index entity method
-    if(src) then local s, v = pcall(src, ent)
-      if(not s) then ent:Remove() end
-      if(v) then ent:Remove() return true end
-    else ent:Remove() return true end
-  end; return false
 end
 
 function ENT:Initialize()
@@ -103,14 +79,15 @@ function ENT:Initialize()
     {"AutoFiring" , "NORMAL", "Is the cannon currently autofiring"   },
     {"LastBullet" , "ENTITY", "The last prop that was fired"         }
   )
-
 end
 
-function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      ,
-                   cannonModel   , fireModel      , recoilAmount   ,
-                   fireDelay     , killDelay      , explosivePower , explosiveRadius,
-                   fireEffect    , fireExplosives , fireDirection  , fireMass, fireClass)
+function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
+                   cannonModel, fireModel     , recoilAmount  ,
+                   fireDelay  , killDelay     , explosivePower, explosiveRadius,
+                   fireEffect , fireExplosives, fireDirection , fireMass, fireClass)
   local ply = self:GetPlayer()
+  self.fireExplosives  = tobool(fireExplosives)
+  self.fireEffect      = tostring(fireEffect or "")
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)
   self.numpadKeyFO     = math.floor(tonumber(numpadKeyFO) or 0)
   -- Remove the previosky used numpad keys anf handle numpad crap
@@ -121,24 +98,22 @@ function ENT:Setup(numpadKeyAF   , numpadKeyFO    , fireForce      ,
   self:RemoveCallOnRemove(gsCall)
   self:CallOnRemove(gsCall, self.RemoveNumpad, self.numpadID.AF, self.numpadID.FO)
   -- Polulate entity data slots wuth the player provided values
-  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, varFireForce:GetFloat())
   self.cannonModel     = tostring(cannonModel or self:GetModel())
   self.fireModel       = tostring(fireModel or "")
-  self.fireClass       = tostring(fireClass or "cannon_prop")
-  if(self.fireClass == "") then self.fireClass = "cannon_prop" end
-  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, varRecAmount:GetFloat())
-  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, varFireDelay:GetFloat())
-  self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, varKillDelay:GetFloat())
-  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, varExpPower:GetFloat())
-  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, varExpRadius:GetFloat())
-  self.fireEffect      = tostring(fireEffect or "")
-  self.fireExplosives  = tobool(fireExplosives)
-  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, varFireMass:GetFloat())
+  self.fireClass       = tostring(fireClass or gsBull)
+  if(self.fireClass == "") then self.fireClass = gsBull end
+  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, PCannonLib.FIREMASS:GetFloat())
+  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, PCannonLib.FIREFORCE:GetFloat())
+  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, PCannonLib.FIREDELAY:GetFloat())
+  self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, PCannonLib.KILLDELAY:GetFloat())
+  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, PCannonLib.RECAMOUNT:GetFloat())
+  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, PCannonLib.EXPPOWER:GetFloat())
+  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, PCannonLib.EXPRADIUS:GetFloat())
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:LengthSqr() > 0) then -- The user or constructor can pass any value
     self.fireDirection:Normalize() -- Normalize the vector when there is some length
   else self.fireDirection.z = 1 end -- Make sure the fire direction length is equal to 1
-  self:SetOverlayText("- Prop Cannon -"..
+  self:SetOverlayText("< Prop Cannon >"..
                       "\nNumpad Key AutoFire("..(self.enabled and "On" or "Off")..") : "..
                                                  math.Round(self.numpadKeyAF    , 0)..
                       "\nNumpad Key FireOne : "..math.Round(self.numpadKeyFO    , 0)..
@@ -210,6 +185,43 @@ function ENT:GetCase(bC, vT, vF)
   return vF -- Return the false condition value
 end
 
+function ENT:BulletArm(ent)
+  if(ent and ent:IsValid()) then
+    local css = ent:GetClass()
+    if(gsBull == css) then return end
+    local ply = self:GetPlayer()
+    local exp = ent.explosive
+    if(not exp) then return end
+    if(ent.Arm) then
+      local suc, err = pcall(ent.Arm, ent)
+      if(not suc) then return end
+    else
+      ent:Use(ply, self, USE_ON, 1)
+    end
+  end
+end
+
+function ENT:BulletTime(ent, num)
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
+  if(not num or num <= 0) then return end
+  local dietime = CurTime() + num
+  local timekey = gsUnit.."_"..ent:EntIndex()
+  timer.Create(timekey, 0, 0, function()
+    if(CurTime() >= dietime) then
+      timer.Remove(timekey)
+      if(IsValid(ent)) then
+        constraint.RemoveAll(ent) -- Remove contraints
+        ent:SetNoDraw(true)       -- Disable drawing
+        ent:SetNotSolid(true)     -- Remove solidness
+        ent:SetMoveType(MOVETYPE_NONE) -- Ditch physics
+        ent:Fire("break"); ent:Remove() -- Remove bullet
+        self:WireWrite("LastBullet")
+      end
+    end -- Valid entity references are removed when available
+  end) -- Otherwise the entity as exploded and reference is NULL
+end
+
 function ENT:FireOne()
   if(not self:CanFire()) then return end
   -- Wiremod values used to store overriding values
@@ -245,37 +257,33 @@ function ENT:FireOne()
     eff:SetOrigin(pos); eff:SetStart(pos); eff:SetScale(1)
     util.Effect(fireEffect, eff, true, true)
   end
+  local ply = self:GetPlayer() -- For prop protection and ownership addons
   local ent = ents.Create(fireClass)
-  if(self:IsOther(ent)) then return end
-  self:DeleteOnRemove(ent)
-  ent:SetCollisionGroup(COLLISION_GROUP_NONE)
-  ent:SetSolid(SOLID_VPHYSICS)
-  ent:SetMoveType(MOVETYPE_VPHYSICS)
-  ent:SetNotSolid(false)
-  ent:SetModel(fireModel)
-  ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
-  ent:SetAngles(self:GetAngles())
-  ent:SetOwner(self) -- Used for bullets fired by their owner
-  ent.Owner = self:GetPlayer() -- For prop protection and ownership addons
-  ent.owner = self:GetPlayer() -- For prop protection and ownership addons
+  if(PCannonLib.IsOther(ent, true)) then return end
+  self:WireWrite("Fired", 1) -- Indicate that bullet is fired
+  self:WireWrite("LastBullet", ent) -- Write last bullet here
+  ent.Owner = ply -- For prop protection and ownership addons
+  ent.owner = ply -- For prop protection and ownership addons
   ent.exploded        = false            -- Prevents bullet infinite recursion
   ent.explosive       = fireExplosives   -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power
-  if(killDelay > 0) then
-    local dietime = CurTime() + killDelay
-    local timekey = gsUnit.."_"..ent:EntIndex()
-    timer.Create(timekey, 0, 0, function()
-      if(CurTime() >= dietime) then timer.Remove(timekey)
-        if(IsValid(ent)) then ent:Fire("break"); ent:Remove() end
-      end -- Valid entity references are removed when available
-    end) -- Otherwise the entity as exploded and reference is NULL
-  end -- The timer is removed no matter if the entity is present or not
+  ent:SetCollisionGroup(COLLISION_GROUP_NONE)
+  ent:SetSolid(SOLID_VPHYSICS)
+  ent:SetMoveType(MOVETYPE_VPHYSICS)
+  ent:SetNotSolid(false)
+  ent:SetModel(fireModel) -- This does not work for custom bomps
+  ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
+  ent:SetAngles(dir:Angle())
+  ent:SetOwner(self) -- Used for bullets fired by their owner
   ent:Spawn()
   ent:Activate()
   ent:SetRenderMode(RENDERMODE_TRANSALPHA)
   ent:DrawShadow(true)
   ent:PhysWake()
+  self:BulletArm(ent)
+  self:BulletTime(ent, killDelay)
+  self:DeleteOnRemove(ent)
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
   if(not (uPhys and uPhys:IsValid())) then return end -- Invalid bullet physics
   uPhys:SetMass(fireMass) -- Apply bullet mass. Requires valid bullet
@@ -284,8 +292,6 @@ function ENT:FireOne()
   if(iPhys and iPhys:IsValid() and recoilAmount > 0) then -- Valid cannon  physics
     iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) -- Recoil amount
   end -- Recoil. The cannon could work without a valid physics model.
-  self:WireWrite("Fired", 1)
-  self:WireWrite("LastBullet", ent)
   self:WireWrite("Fired", 0)
   ent.Owner:AddCount("props", ent)
   ent.Owner:AddCleanup("props", ent)

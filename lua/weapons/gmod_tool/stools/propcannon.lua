@@ -3,58 +3,18 @@
   ~ lexi ~ Ported to Gmod 13 by dvd_video
 --]]
 
-local gsUnit       = "propcannon"
-local pcnFvars     = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
-local varLogFile   = CreateConVar(gsUnit.."_logfile", 0, pcnFvars, "Enable logging in a file")
-local varLogUsed   = CreateConVar(gsUnit.."_logused", 0, pcnFvars, "Enable logging on error")
-local varMenuDigit = CreateConVar(gsUnit.."_maxmenudigit", 5, pcnFvars, "Maximum precision digits for control panel")
-local varRecAmount = CreateConVar(gsUnit.."_maxrecamount", 1, pcnFvars, "Maximum cannon fire recoil amount")
-local varFireDelay = CreateConVar(gsUnit.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
-local varKillDelay = CreateConVar(gsUnit.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay")
-local varExpPower  = CreateConVar(gsUnit.."_maxexppower" , 200, pcnFvars, "Maximum cannon bullet explosive power")
-local varExpRadius = CreateConVar(gsUnit.."_maxexpradius", 500, pcnFvars, "Maximum cannon bullet explosive radius")
-local varFireMass  = CreateConVar(gsUnit.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass")
-local varFireForce = CreateConVar(gsUnit.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force")
+local gsUnit = PCannonLib.GetUnit()
+local gsLimc = PCannonLib.GetUnit(nil, "s")
+local gsType = PCannonLib.GetUnit("gmod_")
 
-cleanup.Register(gsUnit.."s")
+cleanup.Register(gsLimc)
 
 if(SERVER) then
 
-  CreateConVar("sbox_max"..gsUnit.."s", 10, "The maximum number of prop cannon guns you can have out at one time.")
-
-  function notifyUser(ply, msg, type, ...) -- Send notification to client that something happened
-    ply:SendLua("GAMEMODE:AddNotify(\""..tostring(msg).."\", NOTIFY_"..tostring(type)..", 6)")
-    ply:SendLua("surface.PlaySound(\"ambient/water/drip"..math.random(1, 4)..".wav\")")
-    return ...
-  end
-
-  function MakeCannon(ply   , pos   , ang   , keyaf ,
-                      keyfo , force , model , ammo  ,
-                      recoil, delay , kill  , power ,
-                      radius, effect, doboom, direct, ammoms, ammoty)
-    if(not ply:CheckLimit(gsUnit.."s")) then return nil end
-    local eCannon = ents.Create("gmod_"..gsUnit)
-    if(not (eCannon and eCannon:IsValid())) then return nil end
-    eCannon:SetPos(pos)
-    eCannon:SetAngles(ang)
-    eCannon:SetModel(model)
-    eCannon:Spawn()
-    eCannon:SetPlayer(ply)
-    eCannon:SetMaterial("models/shiny") -- Make it shiny and black
-    eCannon:SetRenderMode(RENDERMODE_TRANSALPHA)
-    eCannon:SetColor(Color(0, 0, 0, 255))
-    eCannon:SetCollisionGroup(COLLISION_GROUP_WORLD)
-    eCannon:Setup(keyaf , keyfo , force , model ,
-                  ammo  , recoil, delay , kill  ,
-                  power , radius, effect, doboom, direct, ammoms, ammoty)
-    ply:AddCount(gsUnit.."s", eCannon)
-    return eCannon
-  end
-
-  duplicator.RegisterEntityClass( "gmod_"..gsUnit, MakeCannon, "Pos", "Ang",
-       "numpadKeyAF"   , "numpadKeyFO"    , "fireForce" , "cannonModel"    ,
-       "fireModel"     , "recoilAmount"   , "fireDelay" , "killDelay"      ,
-       "explosivePower", "explosiveRadius", "fireEffect", "fireExplosives" ,
+  duplicator.RegisterEntityClass(gsType, PCannonLib.Cannon, "Pos" ,  "Ang",
+       "numpadKeyAF"   , "numpadKeyFO"    , "fireForce" , "cannonModel"   ,
+       "fireModel"     , "recoilAmount"   , "fireDelay" , "killDelay"     ,
+       "explosivePower", "explosiveRadius", "fireEffect", "fireExplosives",
        "fireDirection" , "fireMass"       , "fireClass")
 
 elseif(CLIENT) then
@@ -100,9 +60,9 @@ elseif(CLIENT) then
   language.Add("tool."..gsUnit..".ammo_model_con"      , "Ammunition model:")
   language.Add("tool."..gsUnit..".ammo_model"          , "The prop being selected for cannon ammunition")
   language.Add("Undone_"..gsUnit, "Undone Prop Cannon")
-  language.Add("Cleanup_"..gsUnit.."s", "Prop Cannons")
-  language.Add("Cleaned_"..gsUnit.."s", "Cleaned up all Prop Cannons")
-  language.Add("SBoxLimit_"..gsUnit.."s", "You've hit the Prop Cannons limit!")
+  language.Add("Cleanup_"..gsLimc, "Prop Cannons")
+  language.Add("Cleaned_"..gsLimc, "Cleaned up all Prop Cannons")
+  language.Add("SBoxLimit_"..gsLimc, "You've hit the Prop Cannons limit!")
 
   table.Empty(list.GetForEdit("CannonModels"))
   list.Add("CannonModels","models/dav0r/thruster.mdl")
@@ -204,7 +164,10 @@ function TOOL:LeftClick(tr)
           util.IsValidProp (ammo))) then return false end
 
   if(trEnt and trEnt:IsValid() and
-     trEnt:GetClass()  == "gmod_"..gsUnit and trEnt:GetPlayer() == ply) then -- Do not update other people stuff
+     trEnt:GetClass() == gsType and
+     trEnt:GetPlayer() == ply and
+     trEnt:GetCreator() == ply
+  ) then -- Do not update other people stuff
      trEnt:Setup(keyaf , keyfo , force , nil ,
                  ammo  , recoil, delay , kill,
                  power , radius, effect, doboom, direct, ammoms, ammoty)
@@ -214,10 +177,10 @@ function TOOL:LeftClick(tr)
   local ang = tr.HitNormal:Angle()
         ang.pitch = ang.pitch + 90
 
-  local eCannon = MakeCannon(ply   , tr.HitPos, ang   , keyaf ,
-                             keyfo , force    , model , ammo  ,
-                             recoil, delay    , kill  , power ,
-                             radius, effect   , doboom, direct, ammoms, ammoty)
+  local eCannon = PCannonLib.Cannon(ply   , tr.HitPos, ang   , keyaf ,
+                                    keyfo , force    , model , ammo  ,
+                                    recoil, delay    , kill  , power ,
+                                    radius, effect   , doboom, direct, ammoms, ammoty)
   if(not (eCannon and eCannon:IsValid())) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
@@ -235,8 +198,8 @@ function TOOL:LeftClick(tr)
     undo.AddEntity(eCannon)
     undo.AddEntity(cWeld)
   undo.Finish()
-  ply:AddCleanup(gsUnit.."s", eCannon)
-  ply:AddCleanup(gsUnit.."s", cWeld)
+  ply:AddCleanup(gsLimc, eCannon)
+  ply:AddCleanup(gsLimc, cWeld)
   return true
 end
 
@@ -246,24 +209,41 @@ function TOOL:RightClick(tr)
   local ply = self:GetOwner()
   if(not tr.Hit) then return false end
   if(tr.HitWorld) then
-    ply:ConCommand(gsUnit.."_ammo_type \"\"\n")
-    notifyUser(ply, "Ammo type clear !",  "UNDO"); return true
+    PCannonLib.ConCommand(ply, "ammo_type", "")
+    PCannonLib.Notify(ply, "Ammo type clear !",  "UNDO"); return true
   else
     if(not (trEnt and trEnt:IsValid())) then return false end
+    local escs = trEnt:GetClass()
+    local emou = trEnt:GetModel()
     if(ply:KeyDown(IN_SPEED)) then
-      local amod = trEnt:GetModel()
-      if(not util.IsValidModel(amod)) then return false end
-      ply:ConCommand(gsUnit.."_cannon_model "..amod.."\n")
-      notifyUser(ply, "Cannon: ["..amod.."] !",  "UNDO"); return true
+      if(not util.IsValidModel(emou)) then return false end
+      PCannonLib.ConCommand(ply, "cannon_model", emou)
+      PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
     elseif(ply:KeyDown(IN_USE)) then
-      local atyp = trEnt:GetClass()
-      ply:ConCommand(gsUnit.."_ammo_type "..atyp.."\n")
-      notifyUser(ply, "Ammo type ["..atyp.."] !",  "UNDO"); return true
+      if(PCannonLib.IsOther(trEnt)) then return false else
+        PCannonLib.ConCommand(ply, "ammo_type", escs)
+        PCannonLib.Notify(ply, "Ammo type ["..escs.."] !",  "UNDO"); return true
+      end
     else
-      local amod = trEnt:GetModel()
-      if(not util.IsValidModel(amod)) then return false end
-      ply:ConCommand(gsUnit.."_ammo_model "..amod.."\n")
-      notifyUser(ply, "Ammo: ["..amod.."] !",  "UNDO"); return true
+      if(gsType == escs) then
+        PCannonLib.ConCommand(ply, "force", trEnt.fireForce)
+        PCannonLib.ConCommand(ply, "delay", trEnt.fireDelay)
+        PCannonLib.ConCommand(ply, "recoil", trEnt.recoilAmount)
+        PCannonLib.ConCommand(ply, "ammo_mass", trEnt.fireMass)
+        PCannonLib.ConCommand(ply, "ammo_type", trEnt.fireClass)
+        PCannonLib.ConCommand(ply, "kill_delay", trEnt.killDelay)
+        PCannonLib.ConCommand(ply, "ammo_model", trEnt.fireModel)
+        PCannonLib.ConCommand(ply, "fire_effect" , trEnt.fireEffect)
+        PCannonLib.ConCommand(ply, "cannon_model" , trEnt.cannonModel)
+        PCannonLib.ConCommand(ply, "explosive_power" , trEnt.explosivePower)
+        PCannonLib.ConCommand(ply, "explosive_radius" , trEnt.explosiveRadius)
+        PCannonLib.ConCommand(ply, "explosive" , (trEnt.fireExplosives and 1 or 0))
+        PCannonLib.Notify(ply, "Cannon copy !",  "UNDO"); return true
+      else
+        if(not util.IsValidModel(emou)) then return false end
+        PCannonLib.ConCommand(ply, "ammo_model", emou)
+        PCannonLib.Notify(ply, "Ammo model: ["..emou.."] !",  "UNDO"); return true
+      end
     end; return false
   end
 end
@@ -271,9 +251,11 @@ end
 function TOOL:Reload(tr)
   if(CLIENT) then return true end
   if(not tr.Hit) then return false end
-  local trEnt = tr.Entity
+  local ply, trEnt = self:GetOwner(), tr.Entity
   if(not (trEnt and trEnt:IsValid())) then return false end
-  if(trEnt:GetClass() ~= "gmod_"..gsUnit) then return false end
+  if(trEnt:GetClass() ~= gsType) then return false end
+  if(trEnt:GetPlayer() ~= ply) then return false end
+  if(trEnt:GetCreator() ~= ply) then return false end
   trEnt:Remove(); return true
 end
 
@@ -284,7 +266,7 @@ function TOOL:UpdateGhost(ent, ply) --( ent, player )
   if(not trHit or
        ((trEnt and trEnt:IsValid()) and
         (trEnt:IsPlayer() or
-         trEnt:GetClass() == "gmod_"..gsUnit))) then
+         trEnt:GetClass() == gsType))) then
     ent:SetNoDraw(true); return end
   local angles = tr.HitNormal:Angle()
   angles.pitch = angles.pitch + 90
@@ -311,7 +293,7 @@ function TOOL.BuildCPanel(cp)
   cp:ClearControls()
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
-  local iDecm = math.Clamp(math.floor(varMenuDigit:GetInt()), 0, 10)
+  local iDecm = math.Clamp(math.floor(PCannonLib.MENUDIGIT:GetInt()), 0, 10)
   local pItem, pProp = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
         pItem:AddOption("Default", gtConvarList)
@@ -334,19 +316,19 @@ function TOOL.BuildCPanel(cp)
   pItem.NumPad2:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyfo"))
   cp:AddPanel(pItem)
 
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, varFireForce:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, PCannonLib.FIREFORCE:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".force"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, varFireMass:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, PCannonLib.FIREMASS:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_mass"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, varFireDelay:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, PCannonLib.FIREDELAY:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, varRecAmount:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, PCannonLib.RECAMOUNT:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".recoil"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, varKillDelay:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, PCannonLib.KILLDELAY:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".kill_delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, varExpPower:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, PCannonLib.EXPPOWER:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, varExpRadius:GetFloat(), iDecm)
+  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, PCannonLib.EXPRADIUS:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
 
   pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
@@ -365,8 +347,8 @@ function TOOL.BuildCPanel(cp)
   for iA = 1, #tA do
     local pIcon = pProp:AddModel(tA[iA])
     function pIcon:DoClick() local ply = LocalPlayer()
-      ply:ConCommand(gsUnit.."_ammo_type \"\"\n")
-      ply:ConCommand(gsUnit.."_ammo_model \""..self.Model.."\"\n")
+      PCannonLib.ConCommand(ply, "ammo_type", "")
+      PCannonLib.ConCommand(ply, "ammo_model", self.Model)
     end
   end
   cp:AddPanel(pProp)
