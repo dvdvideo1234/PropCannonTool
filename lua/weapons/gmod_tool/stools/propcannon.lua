@@ -27,7 +27,7 @@ elseif(CLIENT) then
   }
   language.Add("tool."..gsUnit..".1"                   , "Manipulates a movable cannon that can fire props")
   language.Add("tool."..gsUnit..".left"                , "Creates a cannon. Weld to the trace when prop is hit")
-  language.Add("tool."..gsUnit..".right"               , "Use trace model as ammo. Hold SHIFT to use as cannon model")
+  language.Add("tool."..gsUnit..".right"               , "Use prop model as ammo. Hold SHIFT to use as cannon model")
   language.Add("tool."..gsUnit..".right_use"           , "Use trace class as ammo type. Hit world to reset default")
   language.Add("tool."..gsUnit..".reload"              , "Removes the prop cannon")
   language.Add("tool."..gsUnit..".name"                , "Prop Cannon")
@@ -212,20 +212,16 @@ function TOOL:RightClick(tr)
     PCannonLib.ConCommand(ply, "ammo_type", "")
     PCannonLib.Notify(ply, "Ammo type clear !",  "UNDO"); return true
   else
-    if(not (trEnt and trEnt:IsValid())) then return false end
+    if(not IsValid(trEnt)) then return false end
     local escs = trEnt:GetClass()
     local emou = trEnt:GetModel()
-    if(ply:KeyDown(IN_SPEED)) then
-      if(not util.IsValidModel(emou)) then return false end
-      PCannonLib.ConCommand(ply, "cannon_model", emou)
-      PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
-    elseif(ply:KeyDown(IN_USE)) then
-      if(PCannonLib.IsOther(trEnt)) then return false else
-        PCannonLib.ConCommand(ply, "ammo_type", escs)
-        PCannonLib.Notify(ply, "Ammo type ["..escs.."] !",  "UNDO"); return true
-      end
-    else
-      if(gsType == escs) then
+    local vmou = util.IsValidModel(emou)
+    if(gsType == escs) then
+      if(ply:KeyDown(IN_SPEED)) then
+        if(not vmou) then return false end
+        PCannonLib.ConCommand(ply, "cannon_model", emou)
+        PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
+      else
         PCannonLib.ConCommand(ply, "force", trEnt.fireForce)
         PCannonLib.ConCommand(ply, "delay", trEnt.fireDelay)
         PCannonLib.ConCommand(ply, "recoil", trEnt.recoilAmount)
@@ -239,8 +235,19 @@ function TOOL:RightClick(tr)
         PCannonLib.ConCommand(ply, "explosive_radius" , trEnt.explosiveRadius)
         PCannonLib.ConCommand(ply, "explosive" , (trEnt.fireExplosives and 1 or 0))
         PCannonLib.Notify(ply, "Cannon copy !",  "UNDO"); return true
+      end
+    else
+      if(ply:KeyDown(IN_SPEED)) then
+        if(not vmou) then return false end
+        PCannonLib.ConCommand(ply, "cannon_model", emou)
+        PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
+      elseif(ply:KeyDown(IN_USE)) then
+        if(PCannonLib.IsOther(trEnt)) then return false else
+          PCannonLib.ConCommand(ply, "ammo_type", escs)
+          PCannonLib.Notify(ply, "Ammo type ["..escs.."] !",  "UNDO"); return true
+        end
       else
-        if(not util.IsValidModel(emou)) then return false end
+        if(not vmou) then return false end
         PCannonLib.ConCommand(ply, "ammo_model", emou)
         PCannonLib.Notify(ply, "Ammo model: ["..emou.."] !",  "UNDO"); return true
       end
@@ -252,14 +259,22 @@ function TOOL:Reload(tr)
   if(CLIENT) then return true end
   if(not tr.Hit) then return false end
   local ply, trEnt = self:GetOwner(), tr.Entity
-  if(not (trEnt and trEnt:IsValid())) then return false end
-  if(trEnt:GetClass() ~= gsType) then return false end
-  if(trEnt:GetPlayer() ~= ply) then return false end
-  if(trEnt:GetCreator() ~= ply) then return false end
-  trEnt:Remove(); return true
+  if(not IsValid(trEnt)) then return false end
+  if(trEnt:GetClass() == gsType) then
+    if(trEnt:GetPlayer() ~= ply) then return false end
+    if(trEnt:GetCreator() ~= ply) then return false end
+    trEnt:Remove(); return true
+  else
+    local can = trEnt:GetOwner()
+    if(not IsValid(can)) then return false end
+    if(can:GetPlayer() ~= ply) then return false end
+    if(can:GetCreator() ~= ply) then return false end
+    if(trEnt:GetClass() ~= gsType) then return false end
+    trEnt:Remove(); return true
+  end
 end
 
-function TOOL:UpdateGhost(ent, ply) --( ent, player )
+function TOOL:UpdateGhost(ent, ply)
   if(not (ent and ent:IsValid())) then return end
   local tr = ply:GetEyeTrace()
   local trEnt, trHit = tr.Entity, tr.Hit

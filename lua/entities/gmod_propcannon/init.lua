@@ -8,6 +8,7 @@ include("shared.lua")
 
 local gsBucs = "cannon_prop"
 local gsUnit = PCannonLib.GetUnit()
+local gsType = PCannonLib.GetUnit("gmod_")
 local gsCall = PCannonLib.GetUnit(nil, "_numpad_keys")
 
 function ENT:RemoveNumpad(...)
@@ -181,26 +182,18 @@ function ENT:Think()
 end
 
 function ENT:BulletArm(ent)
-  if(ent and ent:IsValid()) then
-    local css = ent:GetClass()
-    if(gsBucs == css) then return end
-    local ply = self:GetPlayer()
-    local exp = ent.explosive
-    if(not exp) then return end
-    if(ent.Arm) then
-      local suc, err = pcall(ent.Arm, ent)
-      if(not suc) then return end
-    else
-      ent:Use(ply, self, USE_ON, 1)
-    end
+  local css = ent:GetClass()
+  if(gsBucs == css) then return end
+  if(not ent.explosive) then return end
+  if(ent.Arm) then
+    local suc, err = pcall(ent.Arm, ent)
+    if(not suc) then return end
   end
 end
 
-function ENT:BulletTime(ent, num)
-  if(not ent) then return end
-  if(not ent:IsValid()) then return end
-  if(not num or num <= 0) then return end
-  local dietime = CurTime() + num
+function ENT:BulletTime(ent, delay)
+  if(not delay or delay <= 0) then return end
+  local dietime = (CurTime() + delay)
   local timekey = gsUnit.."_"..ent:EntIndex()
   timer.Create(timekey, 0, 0, function()
     if(CurTime() >= dietime) then
@@ -215,6 +208,23 @@ function ENT:BulletTime(ent, num)
       end
     end -- Valid entity references are removed when available
   end) -- Otherwise the entity as exploded and reference is NULL
+end
+
+function ENT:BulletAng(ent, dir)
+  local aim = ent.CustomAimVector
+  local vec, anc = ent:GetUp(), ent:GetAngles()
+  if(aim) then vec:Set(aim); vec:Rotate(anc) end
+  ent:SetAngles(ent:AlignAngles(vec:Angle(), dir:Angle()))
+end
+
+function ENT:BulletPos(ent, pos, dir)
+  local eps = Vector(pos)
+  local ean = ent:GetAngles()
+  local era = ent:BoundingRadius() * 0.8
+  local cra = self:BoundingRadius() * 0.8
+  local eob = ent:OBBCenter(); eob:Rotate(ean)
+  eps:Add((cra + era) * dir); eps:Sub(eob)
+  ent:SetPos(eps)
 end
 
 function ENT:FireOne()
@@ -259,26 +269,26 @@ function ENT:FireOne()
   self:WireWrite("LastBullet", ent) -- Write last bullet here
   ent.Owner = ply -- For prop protection and ownership addons
   ent.owner = ply -- For prop protection and ownership addons
-  ent.exploded        = false            -- Prevents bullet infinite recursion
-  ent.explosive       = fireExplosives   -- Explosive props parameter flag
+  ent.exploded = false -- Prevents bullet infinite recursion
+  ent.explosive = fireExplosives -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power
-  ent:SetCollisionGroup(COLLISION_GROUP_NONE)
-  ent:SetSolid(SOLID_VPHYSICS)
-  ent:SetMoveType(MOVETYPE_VPHYSICS)
-  ent:SetNotSolid(false)
+  ent:SetCollisionGroup(COLLISION_GROUP_NONE) -- Bullet standard collisions
+  ent:SetSolid(SOLID_VPHYSICS) -- Bullet acts like a physics object
+  ent:SetMoveType(MOVETYPE_VPHYSICS) -- Bullet moves like a physics object
+  ent:SetNotSolid(false) -- Make sure bullet is a solid prop with collisions
   ent:SetModel(fireModel) -- This does not work for custom bomps
-  ent:SetPos(pos + dir * (self:BoundingRadius() + ent:BoundingRadius()))
-  ent:SetAngles(dir:Angle())
+  self:BulletAng(ent, dir) -- Use custom angle by populationg aim vector (local)
+  self:BulletPos(ent, pos, dir) -- Positioon the buller OBB. Requites model setup
   ent:SetOwner(self) -- Used for bullets fired by their owner
-  ent:Spawn()
-  ent:Activate()
-  ent:SetRenderMode(RENDERMODE_TRANSALPHA)
-  ent:DrawShadow(true)
-  ent:PhysWake()
-  self:BulletArm(ent)
-  self:BulletTime(ent, killDelay)
-  self:DeleteOnRemove(ent)
+  ent:Spawn() -- Spawn the bullet in the world and make sure it is not stuck
+  ent:Activate() -- Run bullet think hook when available. Some have it
+  ent:SetRenderMode(RENDERMODE_TRANSALPHA) -- Alpha support
+  ent:DrawShadow(true) -- Drawn bullet shadow duhh..
+  ent:PhysWake() -- Wake physics up for mass and force
+  self:BulletArm(ent) -- Arm the bullet in case of missle or a bomb
+  self:BulletTime(ent, killDelay) -- Spawn a timer to deal with kill delay
+  self:DeleteOnRemove(ent) -- Remove all bullets when cannon is removed
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
   if(not (uPhys and uPhys:IsValid())) then return end -- Invalid bullet physics
   uPhys:SetMass(fireMass) -- Apply bullet mass. Requires valid bullet
@@ -294,14 +304,14 @@ end
 
 local function fireToggle(ply, ent)
   if(not (ent and ent:IsValid())) then return end
-  if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
+  if(ent:GetClass() ~= gsType) then return end
   if(ent:WireIsConnected("AutoFire")) then return end
   if(ent.enabled) then ent:FireDisable() else ent:FireEnable() end
 end
 
 local function fireOne(pl, ent)
   if(not (ent and ent:IsValid())) then return end
-  if(ent:GetClass() ~= "gmod_"..gsUnit) then return end
+  if(ent:GetClass() ~= gsType) then return end
   if(ent:WireIsConnected("FireOnce")) then return end
   if(ent:CanFire()) then ent:FireOne() end
 end
