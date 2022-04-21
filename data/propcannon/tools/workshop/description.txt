@@ -1,5 +1,9 @@
+[img=https://i.imgur.com/2txEPIN.gif][/img]
+
+This page uses [url=https://steamcommunity.com/comment/Guide/formattinghelp]steam formatting[/url].
+
 [h1] Description [/h1]
-This addon can give you the ability to have your own movable cannon that fires props
+This addon can give you the ability to have your own movable cannon that fires props.
 
 [h1] Feature List [/h1]
 [list]
@@ -14,10 +18,14 @@ This addon can give you the ability to have your own movable cannon that fires p
  [*] Logging is available ( turn off by default )
  [*] Ability to update a cannon with left click entity class
  [*] Maximum value control setup tweaks are available
+ [*] Many other features not implemented by the original author
  [*] Supports custom bullet entity class. Resets on empty string
+ [*] Automatically centers bullet relative to the fire direction and OBB
+ [*] Automatically activates bullet when available [code]BULLET:Arm() -- The Arm() method is always called when available for explosives[/code]
+ [*] Automatically uses spawn direction local axis [code]BULLET.CustomAimVector = Vector(1,0,0) -- Bullet forward is used to calculate spawn angle[/code]
 [/list]
 
-For detailed manual, please refer to readme.md
+For detailed manual, please refer to readme file below!
 
 Readme: https://github.com/dvdvideo1234/PropCannonTool/blob/master/readme.md
 
@@ -26,8 +34,8 @@ Git repository: https://github.com/dvdvideo1234/PropCannonTool
 Report errors to: https://github.com/dvdvideo1234/PropCannonTool/issues
 
 Reuploading and source stealing will not be tolerated !
-Please respect the Original author for creating this addon and
-me for fixing it to Gmod 13 version coding style !
+Please respect the original author for creating this addon
+Credit for fixing this for Gmod 13 version style goes to me !
 Selling it is also out of option, as the open source suggests !
 
 If you want to support me and you like what I do:
