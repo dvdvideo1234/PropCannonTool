@@ -230,9 +230,17 @@ end
 function ENT:FireOne()
   if(not self:CanFire()) then return end
   -- Wiremod values used to store overriding values
+  local wfireDelay = self:WireRead("FireDelay", true)
+  local wfireClass = self:WireRead("FireClass", true)
+  -- Genral values used for shooting. Overrided by connected wire chips
+  local fireDelay = PCannonLib.GetCase(wfireDelay ~= nil and wfireDelay  >  0, wfireDelay , self.fireDelay)
+  local fireClass = PCannonLib.GetCase(wfireClass ~= nil and wfireClass ~= "", wfireClass , self.fireClass)
+  -- Apply the general shoot trigger logic and bullet configuration
+  self.nextFire = (CurTime() + fireDelay)
+  local ent = ents.Create(fireClass)
+  if(PCannonLib.IsOther(ent, true)) then return end
+  -- Wiremod values used to store overriding values
   local wfireMass        = self:WireRead("FireMass", true)
-  local wfireClass       = self:WireRead("FireClass", true)
-  local wfireDelay       = self:WireRead("FireDelay", true)
   local wfireModel       = self:WireRead("FireModel", true)
   local wkillDelay       = self:WireRead("KillDelay", true)
   local wfireForce       = self:WireRead("FireForce", true)
@@ -243,8 +251,6 @@ function ENT:FireOne()
   local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
   -- Genral values used for shooting. Overrided by connected wire chips
   local fireMass        = PCannonLib.GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
-  local fireClass       = PCannonLib.GetCase(wfireClass       ~= nil and wfireClass      ~= "", wfireClass             , self.fireClass)
-  local fireDelay       = PCannonLib.GetCase(wfireDelay       ~= nil and wfireDelay       >  0, wfireDelay             , self.fireDelay)
   local fireModel       = PCannonLib.GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
   local killDelay       = PCannonLib.GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
   local fireForce       = PCannonLib.GetCase(wfireForce       ~= nil and wfireForce       >= 0, wfireForce             , self.fireForce)
@@ -254,17 +260,15 @@ function ENT:FireOne()
   local explosivePower  = PCannonLib.GetCase(wexplosivePower  ~= nil and wexplosivePower  >= 0, wexplosivePower        , self.explosivePower)
   local explosiveRadius = PCannonLib.GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
   -- Apply the general shoot trigger logic and bullet configuration
-  self.nextFire = (CurTime() + fireDelay)
-  local pos = self:LocalToWorld(self:OBBCenter())
-  local dir = self:GetFireDirection()
-  local eff = self.effectDataClass
-  if(fireEffect ~= "" and fireEffect ~= "none") then
-    eff:SetOrigin(pos); eff:SetStart(pos); eff:SetScale(1)
-    util.Effect(fireEffect, eff, true, true)
-  end
   local ply = self:GetPlayer() -- For prop protection and ownership addons
-  local ent = ents.Create(fireClass)
-  if(PCannonLib.IsOther(ent, true)) then return end
+  local eff = self.effectDataClass -- Reference to our own explotion
+  local dir = self:GetFireDirection() -- Bullet fire diection
+  local pos = self:LocalToWorld(self:OBBCenter())
+  if(fireEffect ~= "" and fireEffect ~= "none") then
+    eff:SetOrigin(pos); eff:SetStart(pos)
+    eff:SetScale(explosiveRadius)
+    util.Effect(fireEffect, eff, true, true)
+  end -- Finish creating effect. Some effect do not use scalling
   self:WireWrite("Fired", 1) -- Indicate that bullet is fired
   self:WireWrite("LastBullet", ent) -- Write last bullet here
   ent.Owner = ply -- For prop protection and ownership addons

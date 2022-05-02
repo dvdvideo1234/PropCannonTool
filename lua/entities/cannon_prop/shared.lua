@@ -48,7 +48,7 @@ end
 hook.Add("EntityTakeDamage", gsUnit.."_crediting",
   function(ent, info) -- Called when something gets damaged by it
     local me = info:GetInflictor() -- Returns the inflictor of the damage
-    if(not (me and me:IsValid())) then return end -- Bail when not valid
+    if(not (me and me:IsValid())) then return end -- Exit when not valid
     if(me:GetClass() == "cannon_prop") then info:SetAttacker(me.Owner) end
   end)
 
@@ -59,27 +59,21 @@ function ENT:Explode(dmgInfo)
   self.exploded = true -- The `exploded` flag is right where it needs to be
   local own = self.Owner
   local pos = self:GetPos()
-  local eff = self.effectDataClass
   local pow = self.explosivePower
   local rad = self.explosiveRadius
-  if(eff) then -- Use the cached effect
-    eff:SetStart(pos)
-    eff:SetOrigin(pos)
-    eff:SetScale(1)
-    util.Effect("Explosion", eff, true, true)
-  end
-  if(self and self:IsValid() and util.IsInWorld(pos) and
-     own and own:IsValid() and rad > 0 and pow > 0)
-  then -- This will call `OnTakeDamage` internally and trigger a chain explosions
-    if(dmgInfo) then -- When damage information is passed `OnTakeDamage`
+  -- This will call `OnTakeDamage` internally and trigger a chain explosions
+  if(self and self:IsValid() and own and own:IsValid()) then
+    local eff = self.effectDataClass -- Use the cached effect
+    if(eff) then -- Do the effect as long as it is present
+      eff:SetStart(pos); eff:SetOrigin(pos); eff:SetScale(rad)
+      util.Effect("Explosion", eff, true, true)
+    end -- When damage information is passed `OnTakeDamage`
+    if(dmgInfo) then -- Use damage information reference
       util.BlastDamageInfo(dmgInfo, pos, rad)
     else -- When there is no damage information present
       util.BlastDamage(self, own, pos, rad, pow)
     end
-  else
-    self:Print("ENT.Explode: Blast conditions not met !")
-  end
-  self:Remove()
+  end; self:Remove()
 end
 
 function ENT:OnTakeDamage(dmgInfo)

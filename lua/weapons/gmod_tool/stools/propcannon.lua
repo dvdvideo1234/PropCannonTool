@@ -109,10 +109,10 @@ elseif(CLIENT) then
 end
 
 TOOL.ClientConVar = {
-  ["keyaf"]            = 44,
-  ["keyfo"]            = 46,
-  ["force"]            = 70000,
-  ["delay"]            = 1,
+  ["keyaf"]            = 50,
+  ["keyfo"]            = 51,
+  ["force"]            = 150000,
+  ["delay"]            = 0.5,
   ["recoil"]           = 1,
   ["explosive"]        = 1,
   ["kill_delay"]       = 5,
