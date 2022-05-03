@@ -31,10 +31,10 @@ values from the cannon will be used. For example the valid value for the billet 
 You can use the following keys to implement custom configuration for your bullet. This
 is often used by scripted bombs when the fire direction does not correspond to the local up direction.
 ```lua
-      BULLET:Arm() -- The Arm() method is called when the class does not match the integrated bullet
-      BULLET.CannonNoArm = true -- Forces the cannon not to call the Arm() method when firing
-      BULLET.CannonAimAxis = Vector(1,0,0) -- Bullet forward local is used to calculate spawn angle
-      BULLET.CannonArmArgs = {1, nil, 2} -- Passes maximum of nine arguments as is to the Arm() method
+  BULLET:Arm() -- The Arm() method is called when the class does not match the integrated bullet
+  BULLET.CannonNoArm = true -- Forces the cannon not to call the Arm() method when firing
+  BULLET.CannonAimAxis = Vector(1,0,0) -- Bullet forward local is used to calculate spawn angle
+  BULLET.CannonArmArgs = {1, nil, 2} -- Passes maximum of nine arguments as is to the Arm() method
 ```
 
 ![PropCannonTool][ref-screen]

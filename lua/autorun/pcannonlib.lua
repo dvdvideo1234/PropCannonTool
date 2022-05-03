@@ -4,6 +4,7 @@ local gsFormHead     = "[%s] %s > %s: "
 local gsFormItem     = " {%s}"
 local gsToolItem     = "propcannon"
 local gsGmodLimc     = gsToolItem.."s"
+local gsFormIcon     = "icon16/%s.png"
 local gsGmodType     = "gmod_"..gsToolItem
 local gsToolNotA     = "GAMEMODE:AddNotify(\"%s\", NOTIFY_%s, 6)"
 local gsToolNotB     = "surface.PlaySound(\"ambient/water/drip%d.wav\")"
@@ -29,6 +30,10 @@ local tOther = {
 function PCannonLib.GetCase(bC, vT, vF)
   if(bC) then return vT end -- True condition
   return vF -- Return the false condition value
+end
+
+function PCannonLib.ToIcon(nam)
+  return gsFormIcon:format(nam)
 end
 
 function PCannonLib.GetUnit(s, e)

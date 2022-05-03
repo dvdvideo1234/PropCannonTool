@@ -309,7 +309,7 @@ function TOOL.BuildCPanel(cp)
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
   local iDecm = math.Clamp(math.floor(PCannonLib.MENUDIGIT:GetInt()), 0, 10)
-  local pItem, pProp = vgui.Create("ControlPresets", cp)
+  local pItem, pProp, vItem = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
         pItem:AddOption("Default", gtConvarList)
         for key, val in pairs(table.GetKeys(gtConvarList)) do pItem:AddConVar(val) end
@@ -346,10 +346,14 @@ function TOOL.BuildCPanel(cp)
   pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, PCannonLib.EXPRADIUS:GetFloat(), iDecm)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
 
+  vItem = GetConVar(gsUnit.."_fire_effect"):GetString()
   pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".fire_effect"))
-  local tE = list.GetForEdit("CannonEffects")
-  for iE = 1, #tE do pItem:AddChoice(tE[iE].name, tE[iE].effect) end
+  local tE = list.GetForEdit("CannonEffects") -- http://www.famfamfam.com/lab/icons/silk/preview.php
+  for iE = 1, #tE do local vE = tE[iE]
+    local nam, eff, use, ico = vE.name, vE.effect, (vItem == eff), vE.icon
+    pItem:AddChoice(nam, eff, use, PCannonLib.ToIcon(ico or "wand"))
+  end
   cp:AddPanel(pItem)
 
   pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
