@@ -182,16 +182,37 @@ function ENT:Think()
 end
 
 function ENT:BulletArm(ent)
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
   local css = ent:GetClass()
   if(gsBucs == css) then return end
+  if(ent.CannonNoArm) then return end
   if(not ent.explosive) then return end
-  if(ent.Arm) then
-    local suc, err = pcall(ent.Arm, ent)
-    if(not suc) then return end
-  end
+  local arm, set = ent.Arm, ent.CannonArmArgs
+  if(arm) then -- Arm method is available
+    if(set ~= nil) then -- Arm method has extern arguments
+      if(type(set) == "table") then -- Process table
+        local a1, a2, a3 = set[1], set[2], set[3]
+        local a4, a5, a6 = set[4], set[5], set[6]
+        local a7, a8, a9 = set[7], set[8], set[9]
+        local suc, err = pcall(arm, ent, a1, a2, a3,
+                                         a4, a5, a6,
+                                         a7, a8, a9)
+        if(not suc) then return end
+      else -- Arm arguments contain single value
+        local suc, err = pcall(arm, ent, set)
+        if(not suc) then return end
+      end -- Process method extern arguments
+    else -- Arm method does not have extern arguments
+      local suc, err = pcall(arm, ent)
+      if(not suc) then return end
+    end -- Arm method has been processed
+  end -- Arm method does not exist
 end
 
 function ENT:BulletTime(ent, delay)
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
   if(not delay or delay <= 0) then return end
   local dietime = (CurTime() + delay)
   local timekey = gsUnit.."_"..ent:EntIndex()
@@ -211,13 +232,17 @@ function ENT:BulletTime(ent, delay)
 end
 
 function ENT:BulletAng(ent, dir)
-  local aim = ent.CustomAimVector
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
+  local aim = ent.CannonAimAxis -- Bullet local vector
   local vec, anc = ent:GetUp(), ent:GetAngles()
   if(aim) then vec:Set(aim); vec:Rotate(anc) end
   ent:SetAngles(ent:AlignAngles(vec:Angle(), dir:Angle()))
 end
 
 function ENT:BulletPos(ent, pos, dir)
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
   local eps = Vector(pos)
   local ean = ent:GetAngles()
   local era = ent:BoundingRadius() * 0.8
@@ -265,8 +290,9 @@ function ENT:FireOne()
   local dir = self:GetFireDirection() -- Bullet fire diection
   local pos = self:LocalToWorld(self:OBBCenter())
   if(fireEffect ~= "" and fireEffect ~= "none") then
+    local mer = (fireForce / PCannonLib.FIREFORCE:GetFloat())
+    eff:SetScale(mer * PCannonLib.EFFECTSCL:GetFloat())
     eff:SetOrigin(pos); eff:SetStart(pos)
-    eff:SetScale(explosiveRadius)
     util.Effect(fireEffect, eff, true, true)
   end -- Finish creating effect. Some effect do not use scalling
   self:WireWrite("Fired", 1) -- Indicate that bullet is fired
@@ -282,7 +308,7 @@ function ENT:FireOne()
   ent:SetMoveType(MOVETYPE_VPHYSICS) -- Bullet moves like a physics object
   ent:SetNotSolid(false) -- Make sure bullet is a solid prop with collisions
   ent:SetModel(fireModel) -- This does not work for custom bomps
-  self:BulletAng(ent, dir) -- Use custom angle by populationg aim vector (local)
+  self:BulletAng(ent, dir) -- Use custom angle by populationg axis vector (local)
   self:BulletPos(ent, pos, dir) -- Positioon the buller OBB. Requites model setup
   ent:SetOwner(self) -- Used for bullets fired by their owner
   ent:Spawn() -- Spawn the bullet in the world and make sure it is not stuck

@@ -64,8 +64,10 @@ function ENT:Explode(dmgInfo)
   -- This will call `OnTakeDamage` internally and trigger a chain explosions
   if(self and self:IsValid() and own and own:IsValid()) then
     local eff = self.effectDataClass -- Use the cached effect
-    if(eff) then -- Do the effect as long as it is present
-      eff:SetStart(pos); eff:SetOrigin(pos); eff:SetScale(rad)
+    if(eff) then -- Draw effect as long as it is present
+      local mer = (rad / PCannonLib.EXPRADIUS:GetFloat())
+      eff:SetScale(mer * PCannonLib.EFFECTSCL:GetFloat())
+      eff:SetStart(pos); eff:SetOrigin(pos)
       util.Effect("Explosion", eff, true, true)
     end -- When damage information is passed `OnTakeDamage`
     if(dmgInfo) then -- Use damage information reference
