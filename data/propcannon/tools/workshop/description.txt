@@ -22,13 +22,13 @@ This addon can give you the ability to have your own movable cannon that fires p
  [*] Supports custom bullet entity class. Resets on empty string
  [*] Automatically centers bullet relative to the fire direction and OBB
  [*] Automatically controls your bullets via custom configuration
-   [code]
-      BULLET:Arm() -- The Arm() method is called when the class does not match the integrated bullet
-      BULLET.CannonNoArm = true -- Forces the cannon not to call the Arm() method when firing
-      BULLET.CannonAimAxis = Vector(1,0,0) -- Bullet forward local is used to calculate spawn angle
-      BULLET.CannonArmArgs = {1, nil, 2} -- Passes maximum of nine arguments as is to the Arm() method
-   [/code]
 [/list]
+[code]
+ BULLET:Arm() -- The Arm() method is called when the class does not match the integrated bullet
+ BULLET.CannonNoArm = true -- Forces the cannon not to call the Arm() method when firing
+ BULLET.CannonAimAxis = Vector(1,0,0) -- Bullet forward local is used to calculate spawn angle
+ BULLET.CannonArmArgs = {1, nil, 2} -- Passes maximum of nine arguments as is to the Arm() method
+[/code]
 
 For detailed manual, please refer to readme file below!
 
