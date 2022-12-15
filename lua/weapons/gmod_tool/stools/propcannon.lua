@@ -15,7 +15,7 @@ if(SERVER) then
        "numpadKeyAF"   , "numpadKeyFO"    , "fireForce" , "cannonModel"   ,
        "fireModel"     , "recoilAmount"   , "fireDelay" , "killDelay"     ,
        "explosivePower", "explosiveRadius", "fireEffect", "fireExplosives",
-       "fireDirection" , "fireMass"       , "fireClass")
+       "fireDirection" , "fireMass"       , "fireClass" , "fireSpreadX"   , "fireSpreadY")
 
 elseif(CLIENT) then
   TOOL.Information = {
@@ -59,6 +59,12 @@ elseif(CLIENT) then
   language.Add("tool."..gsUnit..".keyfo"               , "The dedicated keypad button to preform a single shot when pressed")
   language.Add("tool."..gsUnit..".ammo_model_con"      , "Ammunition model:")
   language.Add("tool."..gsUnit..".ammo_model"          , "The prop being selected for cannon ammunition")
+  language.Add("tool."..gsUnit..".ammo_sprx_con"       , "Ammo spread X:")
+  language.Add("tool."..gsUnit..".ammo_sprx"           , "Angle boundaries spread to randomize fire direction for X")
+  language.Add("tool."..gsUnit..".ammo_spry_con"       , "Ammo spread Y:")
+  language.Add("tool."..gsUnit..".ammo_spry"           , "Angle boundaries spread to randomize fire direction for Y")
+  language.Add("tool."..gsUnit..".axis_size_con"       , "Axis size:")
+  language.Add("tool."..gsUnit..".axis_size"           , "Controls the size of the drawn cannon coordinate system")
   language.Add("Undone_"..gsUnit, "Undone Prop Cannon")
   language.Add("Cleanup_"..gsLimc, "Prop Cannons")
   language.Add("Cleaned_"..gsLimc, "Cleaned up all Prop Cannons")
@@ -88,6 +94,10 @@ elseif(CLIENT) then
   list.Add("CannonAmmoModels","models/props_junk/gascan001a.mdl")
   list.Add("CannonAmmoModels","models/props_junk/metalgascan.mdl")
   list.Add("CannonAmmoModels","models/props_junk/PropaneCanister001a.mdl")
+  list.Add("CannonAmmoModels","models/props_junk/metal_paintcan001a.mdl")
+  list.Add("CannonAmmoModels","models/props_combine/breenglobe.mdl")
+  list.Add("CannonAmmoModels","models/props_junk/plasticbucket001a.mdl")
+  list.Add("CannonAmmoModels","models/props_interiors/pot01a.mdl")
 
   -- https://wiki.facepunch.com/gmod/Effects
   table.Empty(list.GetForEdit("CannonEffects"))
@@ -116,9 +126,12 @@ TOOL.ClientConVar = {
   ["recoil"]           = 1,
   ["explosive"]        = 1,
   ["kill_delay"]       = 5,
+  ["axis_size"]        = 0,
   ["ammo_model"]       = "models/props_junk/watermelon01.mdl",
   ["ammo_mass"]        = 120,
   ["ammo_type"]        = "cannon_prop",
+  ["ammo_sprx"]        = 0,
+  ["ammo_spry"]        = 0,
   ["fire_effect"]      = "RPGShotDown",
   ["fire_direct"]      = "0,0,1",
   ["cannon_model"]     = "models/props_trainstation/trashcan_indoor001b.mdl",
@@ -135,6 +148,12 @@ function TOOL:GetFireDirection()
   return Vector(nX, nY, nZ)
 end
 
+function TOOL:GetFireSpread()
+  local sx = self:GetClientNumber("ammo_sprx")
+  local sy = self:GetClientNumber("ammo_spry")
+  return math.Clamp(sx, 0, 180), math.Clamp(sy, 0, 180)
+end
+
 function TOOL:LeftClick(tr)
   if(CLIENT) then return true end
   if(not tr.Hit) then return false end
@@ -143,6 +162,7 @@ function TOOL:LeftClick(tr)
   if(not util.IsValidPhysicsObject(trEnt, trBone)) then return false end
   local ply    = self:GetOwner()
   local direct = self:GetFireDirection()
+  local amsprx, amspry = self:GetFireSpread()
   local keyaf  = self:GetClientNumber("keyaf")
   local keyfo  = self:GetClientNumber("keyfo")
   local force  = self:GetClientNumber("force")
@@ -170,7 +190,8 @@ function TOOL:LeftClick(tr)
   ) then -- Do not update other people stuff
      trEnt:Setup(keyaf , keyfo , force , nil ,
                  ammo  , recoil, delay , kill,
-                 power , radius, effect, doboom, direct, ammoms, ammoty)
+                 power , radius, effect, doboom,
+                 direct, ammoms, ammoty, amsprx, amspry)
     return true -- Model automatically polulated to avoid difference in visuals and collisions
   end
 
@@ -180,7 +201,8 @@ function TOOL:LeftClick(tr)
   local eCannon = PCannonLib.Cannon(ply   , tr.HitPos, ang   , keyaf ,
                                     keyfo , force    , model , ammo  ,
                                     recoil, delay    , kill  , power ,
-                                    radius, effect   , doboom, direct, ammoms, ammoty)
+                                    radius, effect   , doboom, direct,
+                                    ammoms, ammoty   , amsprx, amspry)
   if(not (eCannon and eCannon:IsValid())) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
@@ -301,6 +323,39 @@ function TOOL:Think()
   end; self:UpdateGhost(ghEnt, self:GetOwner())
 end
 
+function TOOL:GetPosRadius(oPly, vHit, nAxs)
+  local nRad = (vHit - oPly:GetPos()):Length()
+  return math.Clamp(20 * nAxs / nRad, 1, 100)
+end
+
+function TOOL:DrawHUD()
+  if(SERVER) then return end
+  local oPly = self:GetOwner()
+  local stTr = oPly:GetEyeTrace()
+  if(stTr and oPly) then
+    local axislen = self:GetClientNumber("axis_size")
+    if(axislen > 0) then local oEnt = stTr.Entity
+      if(oEnt and oEnt:IsValid() and oEnt:GetClass() == gsType) then
+        local eAng = oEnt:GetAngles()
+        local nRad = self:GetPosRadius(oPly, stTr.HitPos, axislen)
+        local vDir = Vector(oEnt:GetNWVector(gsType.."_firedr"))
+        local vUpa = Vector(oEnt:GetNWVector(gsType.."_fireup"))
+        local bPos = oEnt:GetBulletBase(vDir)
+        vUpa:Rotate(eAng); vDir:Rotate(eAng)
+        local P = bPos:ToScreen();
+        local D = (bPos + axislen * vDir):ToScreen()
+        local U = (bPos + axislen * vUpa):ToScreen()
+        -- Bullet direction and spawn
+        surface.SetDrawColor(255,0,0,255)
+        surface.DrawLine(P.x, P.y, D.x, D.y)
+        surface.SetDrawColor(0,0,255,255)
+        surface.DrawLine(P.x, P.y, U.x, U.y)
+        surface.DrawCircle(P.x, P.y, nRad * 2, Color(255,255,0,255))
+      end
+    end
+  end
+end
+
 local gtConvarList = TOOL:BuildConVarList()
 
 -- Enter `spawnmenu_reload` in the console to reload the panel
@@ -309,19 +364,20 @@ function TOOL.BuildCPanel(cp)
   cp:SetName(language.GetPhrase("tool."..gsUnit..".name"))
   cp:Help   (language.GetPhrase("tool."..gsUnit..".desc"))
   local iDecm = math.Clamp(math.floor(PCannonLib.MENUDIGIT:GetInt()), 0, 10)
+  -- Control panel presets
   local pItem, pProp, vItem = vgui.Create("ControlPresets", cp)
         pItem:SetPreset(gsUnit)
         pItem:AddOption("Default", gtConvarList)
         for key, val in pairs(table.GetKeys(gtConvarList)) do pItem:AddConVar(val) end
   cp:AddItem(pItem)
-
+  -- Cannon model
   pItem = vgui.Create("PropSelect", cp)
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".cannon_model"))
   pItem:ControlValues({convar = gsUnit.."_cannon_model", label = language.GetPhrase("tool."..gsUnit..".cannon_model_con")})
   local tC = list.GetForEdit("CannonModels")
   for iC = 1, #tC do pItem:AddModel(tC[iC]) end
   cp:AddPanel(pItem)
-
+  -- Cannon numad control
   pItem = vgui.Create("CtrlNumPad", cp)
   pItem:SetLabel1(language.GetPhrase("tool."..gsUnit..".keyaf_con"))
   pItem:SetLabel2(language.GetPhrase("tool."..gsUnit..".keyfo_con"))
@@ -330,22 +386,17 @@ function TOOL.BuildCPanel(cp)
   pItem.NumPad1:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyaf"))
   pItem.NumPad2:SetTooltip(language.GetPhrase("tool."..gsUnit..".keyfo"))
   cp:AddPanel(pItem)
-
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".force_con"), gsUnit.."_force", 0, PCannonLib.FIREFORCE:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".force"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".ammo_mass_con"), gsUnit.."_ammo_mass", 1, PCannonLib.FIREMASS:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_mass"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".delay_con"), gsUnit.."_delay", 0, PCannonLib.FIREDELAY:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".recoil_con"), gsUnit.."_recoil", 0, PCannonLib.RECAMOUNT:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".recoil"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".kill_delay_con"), gsUnit.."_kill_delay", 0, PCannonLib.KILLDELAY:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".kill_delay"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_power_con"), gsUnit.."_explosive_power", 0, PCannonLib.EXPPOWER:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_power"))
-  pItem = cp:NumSlider(language.GetPhrase("tool."..gsUnit..".explosive_radius_con"), gsUnit.."_explosive_radius", 0, PCannonLib.EXPRADIUS:GetFloat(), iDecm)
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive_radius"))
-
+  -- Cannon setup values
+  PCannonLib.NumSlider(cp, "force"           , 0, PCannonLib.FIREFORCE:GetFloat(), gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "ammo_mass"       , 1, PCannonLib.FIREMASS:GetFloat() , gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "delay"           , 0, PCannonLib.FIREDELAY:GetFloat(), gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "recoil"          , 0, PCannonLib.RECAMOUNT:GetFloat(), gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "kill_delay"      , 0, PCannonLib.KILLDELAY:GetFloat(), gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "explosive_power" , 0, PCannonLib.EXPPOWER:GetFloat() , gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "explosive_radius", 0, PCannonLib.EXPRADIUS:GetFloat(), gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "ammo_sprx"       , 0, 180, gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "ammo_spry"       , 0, 180, gtConvarList, iDecm)
+  -- Effects
   vItem = GetConVar(gsUnit.."_fire_effect"):GetString()
   pItem = cp:ComboBox(language.GetPhrase("tool."..gsUnit..".fire_effect_con"), gsUnit.."_fire_effect")
   pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".fire_effect"))
@@ -353,12 +404,10 @@ function TOOL.BuildCPanel(cp)
   for iE = 1, #tE do local vE = tE[iE]
     local nam, eff, use, ico = vE.name, vE.effect, (vItem == eff), vE.icon
     pItem:AddChoice(nam, eff, use, PCannonLib.ToIcon(ico or "wand"))
-  end
-  cp:AddPanel(pItem)
-
-  pItem = cp:CheckBox(language.GetPhrase("tool."..gsUnit..".explosive_con"), gsUnit.."_explosive")
-  pItem:SetTooltip(language.GetPhrase("tool."..gsUnit..".explosive"))
-
+  end; cp:AddPanel(pItem)
+  -- Explosive ammunition flag
+  PCannonLib.CheckBox(cp, "explosive")
+  -- Ammo model
   pProp = vgui.Create("PropSelect", cp)
   pProp:SetTooltip(language.GetPhrase("tool."..gsUnit..".ammo_model"))
   pProp:ControlValues({label = language.GetPhrase("tool."..gsUnit..".ammo_model_con")})
@@ -369,6 +418,7 @@ function TOOL.BuildCPanel(cp)
       PCannonLib.ConCommand(ply, "ammo_type", "")
       PCannonLib.ConCommand(ply, "ammo_model", self.Model)
     end
-  end
-  cp:AddPanel(pProp)
+  end; cp:AddPanel(pProp)
+  -- Coordinate system
+  PCannonLib.NumSlider(cp, "axis_size", 0, 25, gtConvarList, iDecm)
 end

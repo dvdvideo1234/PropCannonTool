@@ -27,6 +27,11 @@ local tOther = {
   "IsRagdoll", "IsWeapon" , "IsWidget"
 }; tOther.Size = #tOther
 
+local tAngle = {
+  Data = Angle(),
+  "Forward", "Right", "Up"
+}; tAngle.Size = #tAngle
+
 function PCannonLib.GetCase(bC, vT, vF)
   if(bC) then return vT end -- True condition
   return vF -- Return the false condition value
@@ -45,6 +50,10 @@ end
 local function Other(ent, rem)
   if(rem) then ent:Remove() end
   return true
+end
+
+function PCannonLib.GetRadius(mar)
+  return (tonumber(mar) or 0.6)
 end
 
 function PCannonLib.IsOther(ent, rem)
@@ -78,14 +87,15 @@ function PCannonLib.Print(ent, ...)
     sL = sL..tostring(tD[1]); iD = (iD + 1)
     while(tD[iD]) do local sS = tostring(tD[iD])
       sL, iD = sL..gsFormItem:format(sS), (iD + 1) end
-    file.Append(gsUnit.."_tool/system_log.txt", sL.."\n")
+    file.Append(gsToolItem.."/system_log.txt", sL.."\n")
   else print(sL, ...) end
 end
 
 function PCannonLib.Cannon(ply   , pos   , ang   , keyaf ,
                            keyfo , force , model , ammo  ,
                            recoil, delay , kill  , power ,
-                           radius, effect, doboom, direct, ammoms, ammoty)
+                           radius, effect, doboom, direct,
+                           ammoms, ammoty, amsprx, amspry)
   if(CLIENT) then return nil end
   if(not ply:CheckLimit(gsGmodLimc)) then return nil end
   local ent = ents.Create(gsGmodType)
@@ -101,10 +111,31 @@ function PCannonLib.Cannon(ply   , pos   , ang   , keyaf ,
   ent:SetColor(Color(0, 0, 0, 255))
   ent:SetCollisionGroup(COLLISION_GROUP_WORLD)
   ent:Setup(keyaf , keyfo , force , model ,
-                ammo  , recoil, delay , kill  ,
-                power , radius, effect, doboom, direct, ammoms, ammoty)
+            ammo  , recoil, delay , kill  ,
+            power , radius, effect, doboom,
+            direct, ammoms, ammoty, amsprx, amspry)
   ply:AddCount(gsGmodLimc, ent)
   return ent
+end
+
+--[[
+ * Attempts to find the non-rotated UP direction
+ * based on the provided forward direction
+]]
+function PCannonLib.GetUp(fwd)
+  local vup = Vector()
+  local ang, dot = tAngle.Data
+  for iD = 1, tAngle.Size do
+    local dir = ang[tAngle[iD]](ang)
+    local mar = math.abs(dir:Dot(fwd))
+    if(not dot or mar <= dot) then
+      dot = mar; vup:Set(dir)
+    end
+  end
+  local rgh = fwd:Cross(vup)
+  vup:Set(rgh:Cross(fwd))
+  vup:Normalize()
+  return vup
 end
 
 function PCannonLib.ConCommand(ply, nam, val)
@@ -113,4 +144,20 @@ function PCannonLib.ConCommand(ply, nam, val)
   else
     RunConsoleCommand(gsToolItem.."_"..nam, tostring(val))
   end
+end
+
+function PCannonLib.NumSlider(panel, name, vmin, vmax, conv, decim)
+  local long = gsToolItem.."_"..name
+  local item = panel:NumSlider(language.GetPhrase(
+    "tool."..gsToolItem.."."..name.."_con"), long, vmin, vmax, decim)
+  item:SetTooltip(language.GetPhrase("tool."..gsToolItem.."."..name))
+  if(conv) then local def = tonumber(conv[long])
+    if(def) then item:SetDefaultValue(def) end
+  end
+end
+
+function PCannonLib.CheckBox(panel, name)
+  local long = gsToolItem.."_"..name
+  local item = panel:CheckBox(language.GetPhrase("tool."..gsToolItem.."."..name.."_con"), long)
+  item:SetTooltip(language.GetPhrase("tool."..gsToolItem.."."..name))
 end

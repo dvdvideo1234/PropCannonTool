@@ -13,6 +13,7 @@ ENT.Contact        = "lexi@lexi.org.uk"   -- Email dvd_video@abv.bg
 ENT.Spawnable      = false
 ENT.AdminSpawnable = false
 
+local gsBucs = "cannon_prop"
 local gsUnit = PCannonLib.GetUnit()
 
 AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
@@ -27,7 +28,7 @@ function ENT:Print(...)
 end
 
 if(CLIENT) then
-  language.Add("cannon_prop", ENT.PrintName)
+  language.Add(gsBucs, ENT.PrintName)
   return
 end
 
@@ -49,7 +50,7 @@ hook.Add("EntityTakeDamage", gsUnit.."_crediting",
   function(ent, info) -- Called when something gets damaged by it
     local me = info:GetInflictor() -- Returns the inflictor of the damage
     if(not (me and me:IsValid())) then return end -- Exit when not valid
-    if(me:GetClass() == "cannon_prop") then info:SetAttacker(me.Owner) end
+    if(me:GetClass() == gsBucs) then info:SetAttacker(me.Owner) end
   end)
 
 function ENT:Explode(dmgInfo)

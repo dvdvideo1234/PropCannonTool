@@ -49,6 +49,8 @@ function ENT:Initialize()
   self.recoilAmount    = 0
   self.fireDelay       = 1
   self.killDelay       = 5
+  self.fireSpreadX     = 0
+  self.fireSpreadY     = 0
   self.explosivePower  = 10
   self.explosiveRadius = 200
   self.fireEffect      = "Explosion"
@@ -82,10 +84,23 @@ function ENT:Initialize()
   )
 end
 
-function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
-                   cannonModel, fireModel     , recoilAmount  ,
-                   fireDelay  , killDelay     , explosivePower, explosiveRadius,
-                   fireEffect , fireExplosives, fireDirection , fireMass, fireClass)
+function ENT:UpdateUCS(cucs, uent)
+  if(cucs) then -- Calculate UCS status
+    self.fireUpDirAxis = PCannonLib.GetUp(self.fireDirection)
+    self.fireRgDirAxis = self.fireDirection:Cross(self.fireUpDirAxis)
+  end
+  if(uent) then
+    self:SetNWVector(gsType.."_firedr", self.fireDirection)
+    self:SetNWVector(gsType.."_fireup", self.fireUpDirAxis)
+    self:SetNWVector(gsType.."_fireRg", self.fireRgDirAxis)
+  end
+end
+
+function ENT:Setup(numpadKeyAF    , numpadKeyFO, fireForce     ,
+                   cannonModel    , fireModel  , recoilAmount  ,
+                   fireDelay      , killDelay  , explosivePower,
+                   explosiveRadius, fireEffect , fireExplosives,
+                   fireDirection  , fireMass   , fireClass     , fireSpreadX, fireSpreadY)
   local ply = self:GetPlayer()
   self.fireExplosives  = tobool(fireExplosives)
   self.fireEffect      = tostring(fireEffect or "")
@@ -103,6 +118,8 @@ function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
   self.fireModel       = tostring(fireModel or "")
   self.fireClass       = tostring(fireClass or gsBucs)
   if(self.fireClass == "") then self.fireClass = gsBucs end
+  self.fireSpreadX     = math.Clamp(tonumber(fireSpreadX) or 0, 0, 180)
+  self.fireSpreadY     = math.Clamp(tonumber(fireSpreadY) or 0, 0, 180)
   self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, PCannonLib.FIREMASS:GetFloat())
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, PCannonLib.FIREFORCE:GetFloat())
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, PCannonLib.FIREDELAY:GetFloat())
@@ -113,17 +130,18 @@ function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:LengthSqr() > 0) then -- The user or constructor can pass any value
     self.fireDirection:Normalize() -- Normalize the vector when there is some length
-  else self.fireDirection.z = 1 end -- Make sure the fire direction length is equal to 1
+  else self.fireDirection.z = 1 end; self:UpdateUCS(true, true) -- Direction length must be equal to 1
   self:SetOverlayText("< Prop Cannon >"..
-                      "\nNumpad Key AutoFire("..(self.enabled and "On" or "Off")..") : "..
-                                                 math.Round(self.numpadKeyAF    , 0)..
-                      "\nNumpad Key FireOne : "..math.Round(self.numpadKeyFO    , 0)..
+                      "\nNumpad AutoFire : "   ..math.Round(self.numpadKeyAF    , 0)..
+                      "\nNumpad FireOnce : "   ..math.Round(self.numpadKeyFO    , 0)..
                       "\nFiring Delay : "      ..math.Round(self.fireDelay      , 2)..
                       "\nFiring Force : "      ..math.Round(self.fireForce      , 2)..
-                      "\nFiring Direction : "  ..math.Round(self.fireDirection.x, 2)..", "..
-                                                 math.Round(self.fireDirection.y, 2)..", "..
-                                                 math.Round(self.fireDirection.z, 2)..
+                      "\nFiring Direction : [" ..math.Round(self.fireDirection.x, 2)..","..
+                                                 math.Round(self.fireDirection.y, 2)..","..
+                                                 math.Round(self.fireDirection.z, 2).."]"..
                       "\nBullet Weight : "     ..math.Round(self.fireMass       , 2)..
+                      "\nBullet Spread : ["    ..math.Round(self.fireSpreadX, 2).."|"..
+                                                 math.Round(self.fireSpreadY, 2).."]"..
                       "\nFiring Effect : "     ..self.fireEffect..
                       "\nBullet Model : "      ..self.fireModel..
                       "\nBullet Class : "      ..self.fireClass..
@@ -135,14 +153,20 @@ function ENT:Setup(numpadKeyAF, numpadKeyFO   , fireForce     ,
 end
 
 function ENT:GetFireDirection()
-  local sang, sdir = self:GetAngles(), Vector()
+  local sdir = Vector(self.fireDirection) -- Read direction
+  local sang = self.fireDirection:AngleEx(self.fireUpDirAxis)
+        sang = self:LocalToWorldAngles(sang)
   local wdir = self:WireRead("FireDirection", true)
-  sdir:Set(self.fireDirection) -- Read the internal direction
   if(wdir ~= nil) then sdir:Set(wdir) -- Override using wire
     if(sdir:LengthSqr() > 0) then -- Wire input can pass any value
       sdir:Normalize() -- Normalize the vector when there is some length
     else sdir.z = 1 end -- Make sure the fire direction length is equal to 1
-  end; sdir:Rotate(sang); return sdir -- Forcing sane direction on the prop cannon
+  end -- Assume that the wire user does not need to use HUD update
+  if(self.fireSpreadX > 0 or self.fireSpreadY > 0) then
+    local axsX, axsY = sang:Up(), sang:Right()
+    sang:RotateAroundAxis(axsX, self.fireSpreadX * (math.random() - 0.5))
+    sang:RotateAroundAxis(axsY, self.fireSpreadY * (math.random() - 0.5))
+  end; return sang:Forward() -- Forcing sane direction on the prop cannon
 end
 
 function ENT:OnTakeDamage(dmginfo)
@@ -229,27 +253,6 @@ function ENT:BulletTime(ent, delay)
       end
     end -- Valid entity references are removed when available
   end) -- Otherwise the entity as exploded and reference is NULL
-end
-
-function ENT:BulletAng(ent, dir)
-  if(not ent) then return end
-  if(not ent:IsValid()) then return end
-  local aim = ent.CannonAimAxis -- Bullet local vector
-  local vec, anc = ent:GetUp(), ent:GetAngles()
-  if(aim) then vec:Set(aim); vec:Rotate(anc) end
-  ent:SetAngles(ent:AlignAngles(vec:Angle(), dir:Angle()))
-end
-
-function ENT:BulletPos(ent, pos, dir)
-  if(not ent) then return end
-  if(not ent:IsValid()) then return end
-  local eps = Vector(pos)
-  local ean = ent:GetAngles()
-  local era = ent:BoundingRadius() * 0.8
-  local cra = self:BoundingRadius() * 0.8
-  local eob = ent:OBBCenter(); eob:Rotate(ean)
-  eps:Add((cra + era) * dir); eps:Sub(eob)
-  ent:SetPos(eps)
 end
 
 function ENT:FireOne()
