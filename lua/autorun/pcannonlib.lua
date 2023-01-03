@@ -3,6 +3,7 @@ PCannonLib = PCannonLib or {} -- Initialize the global variable of the library
 local gsFormHead     = "[%s] %s > %s: "
 local gsFormItem     = " {%s}"
 local gsToolItem     = "propcannon"
+local gsListSepr     = ";"
 local gsGmodLimc     = gsToolItem.."s"
 local gsFormIcon     = "icon16/%s.png"
 local gsGmodType     = "gmod_"..gsToolItem
@@ -11,6 +12,7 @@ local gsToolNotB     = "surface.PlaySound(\"ambient/water/drip%d.wav\")"
 local pcnFvars       = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 PCannonLib.LOGFILE   = CreateConVar(gsToolItem.."_logfile", 0, pcnFvars, "Enable logging in a file")
 PCannonLib.LOGUSED   = CreateConVar(gsToolItem.."_logused", 0, pcnFvars, "Enable logging on error")
+PCannonLib.OTHCLASS  = CreateConVar(gsToolItem.."_othclass", "", pcnFvars, "List of delimited blacklisted bullet classes")
 PCannonLib.MENUDIGIT = CreateConVar(gsToolItem.."_maxmenudigit", 5, pcnFvars, "Maximum precision digits for control panel")
 PCannonLib.RECAMOUNT = CreateConVar(gsToolItem.."_maxrecamount", 1, pcnFvars, "Maximum cannon fire recoil amount")
 PCannonLib.FIREDELAY = CreateConVar(gsToolItem.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
@@ -22,12 +24,43 @@ PCannonLib.FIREFORCE = CreateConVar(gsToolItem.."_maxfireforce", 500000, pcnFvar
 PCannonLib.EFFECTSCL = CreateConVar(gsToolItem.."_maxeffectscl", 10, pcnFvars, "Maximum blast and explosion effect scale")
 PCannonLib.MASCANNON = CreateConVar("sbox_max"..gsToolItem.."s", 10, "The maximum number of prop cannon guns you can have out at one time")
 
+--[[
+ * Configure bullet black lists
+ * Contains: [class_name] = true/false
+]]
 local tOther = {
-  Data = {}, -- Hash lookup
+  Data = {}, -- Hash class lookup
   "IsPlayer" , "IsVehicle", "IsNPC"   ,
   "IsRagdoll", "IsWeapon" , "IsWidget"
 }; tOther.Size = #tOther
 
+function PCannonLib.UpdateBlackList(ext, stf)
+  if(ext) then local css = tostring(ext or "")
+    if(stf ~= nil) then
+      if(css ~= "") then tOther.Data[css] = tobool(stf) end
+    else
+      if(css ~= "") then tOther.Data[css] = true end
+    end
+  else
+    local oth = PCannonLib.OTHCLASS:GetString()
+    local set = gsListSepr:Explode(oth)
+    for idx = 1, #set do local css = set[idx]
+      if(css ~= "") then tOther.Data[css] = true end
+    end -- Apply the convar blacklist
+  end
+end
+
+-- Configure bullet class black list
+local vanm = PCannonLib.OTHCLASS:GetName()
+cvars.RemoveChangeCallback(vanm, vanm)
+cvars.AddChangeCallback(vanm, function(name, o, n)
+  PCannonLib.UpdateBlackList()
+end, vanm); PCannonLib.UpdateBlackList()
+
+--[[
+ * Pick direction with the most weigth
+ * Mainly used to spawn cannon with direction up
+]]
 local tAngle = {
   Data = Angle(),
   "Forward", "Right", "Up"
