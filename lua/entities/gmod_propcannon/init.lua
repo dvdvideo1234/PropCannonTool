@@ -44,6 +44,7 @@ function ENT:Initialize()
   self.numpadKeyAF     = 44
   self.numpadKeyFO     = 46
   self.fireForce       = 40000
+  self.fireEntity      = nil
   self.cannonModel     = "models/props_trainstation/trashcan_indoor001b.mdl"
   self.fireModel       = "models/props_junk/cinderblock01a.mdl"
   self.recoilAmount    = 0
@@ -238,18 +239,20 @@ function ENT:BulletTime(ent, delay)
   if(not ent) then return end
   if(not ent:IsValid()) then return end
   if(not delay or delay <= 0) then return end
+  self.fireEntity = ent -- Mark the bullet
   local dietime = (CurTime() + delay)
   local timekey = gsUnit.."_"..ent:EntIndex()
   timer.Create(timekey, 0, 0, function()
     if(CurTime() >= dietime) then
       timer.Remove(timekey)
       if(IsValid(ent)) then
+        if(self.fireEntity == ent)
+          self:WireWrite("LastBullet") end
         constraint.RemoveAll(ent) -- Remove contraints
         ent:SetNoDraw(true)       -- Disable drawing
         ent:SetNotSolid(true)     -- Remove solidness
         ent:SetMoveType(MOVETYPE_NONE) -- Ditch physics
         ent:Fire("break"); ent:Remove() -- Remove bullet
-        self:WireWrite("LastBullet")
       end
     end -- Valid entity references are removed when available
   end) -- Otherwise the entity as exploded and reference is NULL

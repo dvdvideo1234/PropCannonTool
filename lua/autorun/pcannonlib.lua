@@ -23,6 +23,7 @@ PCannonLib.EFFECTSCL = CreateConVar(gsToolItem.."_maxeffectscl", 10, pcnFvars, "
 PCannonLib.MASCANNON = CreateConVar("sbox_max"..gsToolItem.."s", 10, "The maximum number of prop cannon guns you can have out at one time")
 
 local tOther = {
+  Data = {}, -- Hash lookup
   "IsPlayer" , "IsVehicle", "IsNPC"   ,
   "IsRagdoll", "IsWeapon" , "IsWidget"
 }; tOther.Size = #tOther
@@ -47,26 +48,32 @@ function PCannonLib.GetUnit(s, e)
   return (s..gsToolItem..e)
 end
 
-local function Other(ent, rem)
-  if(rem) then ent:Remove() end
-  return true
-end
-
 function PCannonLib.GetRadius(mar)
   return (tonumber(mar) or 0.6)
+end
+
+local function Other(ent, rem, reg)
+  if(rem) then ent:Remove() end
+  return true
 end
 
 function PCannonLib.IsOther(ent, rem)
   if(not ent) then return true end
   if(not IsValid(ent)) then return true end
+  local css = ent:GetClass() -- Entity class
+  local vao = tOther.Data[css] -- Other value
+  if(vao ~= nil) then -- Entity class is checked
+    if(vao) then return Other(ent, rem) end
+    return vao end -- Entity is not other class
+  end; vao = false -- Assume the entity is not other
   for idx = 1, tOther.Size do -- Integer for loop
     local nam = tOther[idx] -- Retrieve method name
     local src = ent[nam]    -- Index entity method
     if(src) then local s, v = pcall(src, ent)
-      if(not s) then return Other(ent, rem) end
-      if(v) then return Other(ent, rem) end
-    else return Other(ent, rem) end
-  end; return false
+      if(not s) then vao = Other(ent, rem) end
+      if(v) then vao = Other(ent, rem) end
+    else vao = Other(ent, rem) end
+  end; tOther.Data[css] = vao; return vao
 end
 
 -- Send notification to client that something happened
