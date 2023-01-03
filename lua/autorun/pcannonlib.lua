@@ -52,7 +52,7 @@ function PCannonLib.GetRadius(mar)
   return (tonumber(mar) or 0.6)
 end
 
-local function Other(ent, rem, reg)
+local function Other(ent, rem)
   if(rem) then ent:Remove() end
   return true
 end
@@ -70,9 +70,9 @@ function PCannonLib.IsOther(ent, rem)
     local nam = tOther[idx] -- Retrieve method name
     local src = ent[nam]    -- Index entity method
     if(src) then local s, v = pcall(src, ent)
-      if(not s) then vao = Other(ent, rem) end
-      if(v) then vao = Other(ent, rem) end
-    else vao = Other(ent, rem) end
+      if(not s) then vao = Other(ent, rem); break end
+      if(v) then vao = Other(ent, rem); break end
+    else vao = Other(ent, rem); break end
   end; tOther.Data[css] = vao; return vao
 end
 
