@@ -4,6 +4,7 @@ local gsFormHead     = "[%s] %s > %s: "
 local gsFormItem     = " {%s}"
 local gsToolItem     = "propcannon"
 local gsListSepr     = ";"
+local gsTimerID      = "%s-%d-%s"
 local gsGmodLimc     = gsToolItem.."s"
 local gsFormIcon     = "icon16/%s.png"
 local gsGmodType     = "gmod_"..gsToolItem
@@ -22,7 +23,12 @@ PCannonLib.EXPRADIUS = CreateConVar(gsToolItem.."_maxexpradius", 500, pcnFvars, 
 PCannonLib.FIREMASS  = CreateConVar(gsToolItem.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass")
 PCannonLib.FIREFORCE = CreateConVar(gsToolItem.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force")
 PCannonLib.EFFECTSCL = CreateConVar(gsToolItem.."_maxeffectscl", 10, pcnFvars, "Maximum blast and explosion effect scale")
+PCannonLib.ALGNVELCY = CreateConVar(gsToolItem.."_bualgnvelcty", 0, pcnFvars, "Multiplier for bullet aim with velocity alignment")
 PCannonLib.MASCANNON = CreateConVar("sbox_max"..gsToolItem.."s", 10, "The maximum number of prop cannon guns you can have out at one time")
+
+function PCannonLib.GetTimerID(ent, ids)
+  return gsTimerID:format(ent:GetClass(), ent:EntIndex(), ids)
+end
 
 --[[
  * Configure bullet black lists

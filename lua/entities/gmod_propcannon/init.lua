@@ -58,6 +58,7 @@ function ENT:Initialize()
   self.fireExplosives  = true
   self.fireMass        = 120 -- Mass with optimal distance for projectile
   self.fireDirection   = Vector(0,0,1) -- Default UP
+  self.fireAimAxis     = Vector(0,0,1) -- Default bullet aim axis
 
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
@@ -238,10 +239,10 @@ end
 function ENT:BulletTime(ent, delay)
   if(not ent) then return end
   if(not ent:IsValid()) then return end
-  if(not delay or delay <= 0) then return end
   self.fireEntity = ent -- Mark the bullet
+  if(not delay or delay <= 0) then return end
   local dietime = (CurTime() + delay)
-  local timekey = gsUnit.."_"..ent:EntIndex()
+  local timekey = PCannonLib.GetTimerID(ent, "T")
   timer.Create(timekey, 0, 0, function()
     if(CurTime() >= dietime) then
       timer.Remove(timekey)
@@ -256,6 +257,23 @@ function ENT:BulletTime(ent, delay)
       end
     end -- Valid entity references are removed when available
   end) -- Otherwise the entity as exploded and reference is NULL
+end
+
+function ENT:BulletAlign(ent)
+  local vag = PCannonLib.ALGNVELCY:GetFloat()
+  if(vag <= 0) then return end
+  local aim, aiv = self:GetBulletAxis(ent), Vector()
+  local key = PCannonLib.GetTimerID(ent, "A")
+  timer.Create(key, 0, 0, function()
+    if(ent and ent:IsValid()) then
+      local phy = ent:GetPhysicsObject()
+      if(phy and phy:IsValid()) then
+        aiv:Set(aim); aiv:Rotate(ent:GetAngles())
+        local vec = ent:GetVelocity():Cross(aiv); vec:Mul(vag)
+        phy:ApplyTorqueCenter(vec)
+      else timer.Remove(key) end
+    else timer.Remove(key) end
+  end
 end
 
 function ENT:FireOne()
@@ -323,6 +341,7 @@ function ENT:FireOne()
   ent:DrawShadow(true) -- Drawn bullet shadow duhh..
   ent:PhysWake() -- Wake physics up for mass and force
   self:BulletArm(ent) -- Arm the bullet in case of missle or a bomb
+  self:BulletAlign(ent) -- Make forward local bullet velocity alignment
   self:BulletTime(ent, killDelay) -- Spawn a timer to deal with kill delay
   self:DeleteOnRemove(ent) -- Remove all bullets when cannon is removed
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()

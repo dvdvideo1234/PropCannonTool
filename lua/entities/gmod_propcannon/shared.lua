@@ -29,12 +29,23 @@ if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")
 end
 
+--[[
+ * Returns the bullet forward aim
+ * axis as a local vector
+]]
+function ENT:GetBulletAxis(ent)
+  if(not ent) then return Vector() end
+  if(not ent:IsValid()) then return Vector() end
+  local aim = ent.CannonAimAxis
+  if(not aim) then aim = self.fireAimAxis end
+  if(not aim) then return Vector(0,0,1) end
+  return Vector(aim)
+end
+
 function ENT:BulletAng(ent, dir)
   if(not ent) then return end
   if(not ent:IsValid()) then return end
-  local aim = ent.CannonAimAxis -- Bullet local vector
-  local vec, anc = ent:GetUp(), ent:GetAngles()
-  if(aim) then vec:Set(aim); vec:Rotate(anc) end
+  local vec = self:GetBulletAxis(ent); vec:Rotate(ent:GetAngles())
   ent:SetAngles(ent:AlignAngles(vec:Angle(), dir:Angle()))
 end
 
