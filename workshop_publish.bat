@@ -34,7 +34,7 @@ timeout 5
 
 md "%gmadRevPath%Workshop\!gmadName!" >> !gmadNameLOG!
 for %%i in %gmadDirs% do (
-  echo Extracting %%i
+  echo Extracting: %%i
   call xcopy "!gmadRevPath!%%i" "!gmadRevPath!Workshop\!gmadName!\%%i" /EXCLUDE:!gmadADTools!\workshop\key.txt /E /C /I /F /R /Y >> !gmadNameLOG!
 )
 
