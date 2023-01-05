@@ -3,6 +3,8 @@ PCannonLib = PCannonLib or {} -- Initialize the global variable of the library
 local gsFormHead     = "[%s] %s > %s: "
 local gsFormItem     = " {%s}"
 local gsToolItem     = "propcannon"
+local gsListSepr     = "#"
+local gsTimerID      = "%s-%d-%s"
 local gsGmodLimc     = gsToolItem.."s"
 local gsFormIcon     = "icon16/%s.png"
 local gsGmodType     = "gmod_"..gsToolItem
@@ -11,22 +13,62 @@ local gsToolNotB     = "surface.PlaySound(\"ambient/water/drip%d.wav\")"
 local pcnFvars       = bit.bor(FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_PRINTABLEONLY)
 PCannonLib.LOGFILE   = CreateConVar(gsToolItem.."_logfile", 0, pcnFvars, "Enable logging in a file")
 PCannonLib.LOGUSED   = CreateConVar(gsToolItem.."_logused", 0, pcnFvars, "Enable logging on error")
-PCannonLib.MENUDIGIT = CreateConVar(gsToolItem.."_maxmenudigit", 5, pcnFvars, "Maximum precision digits for control panel")
-PCannonLib.RECAMOUNT = CreateConVar(gsToolItem.."_maxrecamount", 1, pcnFvars, "Maximum cannon fire recoil amount")
-PCannonLib.FIREDELAY = CreateConVar(gsToolItem.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay")
-PCannonLib.KILLDELAY = CreateConVar(gsToolItem.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay")
-PCannonLib.EXPPOWER  = CreateConVar(gsToolItem.."_maxexppower" , 200, pcnFvars, "Maximum cannon bullet explosive power")
-PCannonLib.EXPRADIUS = CreateConVar(gsToolItem.."_maxexpradius", 500, pcnFvars, "Maximum cannon bullet explosive radius")
-PCannonLib.FIREMASS  = CreateConVar(gsToolItem.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass")
-PCannonLib.FIREFORCE = CreateConVar(gsToolItem.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force")
-PCannonLib.EFFECTSCL = CreateConVar(gsToolItem.."_maxeffectscl", 10, pcnFvars, "Maximum blast and explosion effect scale")
+PCannonLib.OTHCLASS  = CreateConVar(gsToolItem.."_othclass", "", pcnFvars, "List of delimited blacklisted bullet classes")
+PCannonLib.MENUDIGIT = CreateConVar(gsToolItem.."_maxmenudigit", 3, pcnFvars, "Maximum precision digits for control panel", 0, 5)
+PCannonLib.RECAMOUNT = CreateConVar(gsToolItem.."_maxrecamount", 1, pcnFvars, "Maximum cannon fire recoil amount", 0, 2)
+PCannonLib.FIREDELAY = CreateConVar(gsToolItem.."_maxfiredelay", 50, pcnFvars, "Maximum cannon firing delay", 0, 100)
+PCannonLib.KILLDELAY = CreateConVar(gsToolItem.."_maxkilldelay", 30, pcnFvars, "Maximum cannon bullet kill delay", 0, 60)
+PCannonLib.EXPPOWER  = CreateConVar(gsToolItem.."_maxexppower" , 200, pcnFvars, "Maximum cannon bullet explosive power", 0, 400)
+PCannonLib.EXPRADIUS = CreateConVar(gsToolItem.."_maxexpradius", 500, pcnFvars, "Maximum cannon bullet explosive radius", 0, 1000)
+PCannonLib.FIREMASS  = CreateConVar(gsToolItem.."_maxfiremass" , 50000, pcnFvars, "Maximum cannon bullet firing mass", 1, 100000)
+PCannonLib.FIREFORCE = CreateConVar(gsToolItem.."_maxfireforce", 500000, pcnFvars, "Maximum cannon bullet firing force", 0, 1000000)
+PCannonLib.EFFECTSCL = CreateConVar(gsToolItem.."_maxeffectscl", 10, pcnFvars, "Maximum blast and explosion effect scale", 0, 50)
+PCannonLib.ALGNVELCY = CreateConVar(gsToolItem.."_bualgnvelcty", 0, pcnFvars, "Multiplier for bullet aim with velocity alignment", 0, 50)
 PCannonLib.MASCANNON = CreateConVar("sbox_max"..gsToolItem.."s", 10, "The maximum number of prop cannon guns you can have out at one time")
 
+function PCannonLib.GetTimerID(ent, ids)
+  return gsTimerID:format(ent:GetClass(), ent:EntIndex(), ids)
+end
+
+--[[
+ * Configure bullet black lists
+ * Contains: [class_name] = true/false
+]]
 local tOther = {
+  Data = {}, -- Hash class lookup
   "IsPlayer" , "IsVehicle", "IsNPC"   ,
   "IsRagdoll", "IsWeapon" , "IsWidget"
 }; tOther.Size = #tOther
 
+function PCannonLib.UpdateBlackList(ext, stf)
+  if(ext) then local css = tostring(ext or "")
+    if(stf ~= nil) then
+      if(css ~= "") then tOther.Data[css] = tobool(stf) end
+    else
+      if(css ~= "") then tOther.Data[css] = true end
+    end
+  else
+    local oth = PCannonLib.OTHCLASS:GetString()
+    local set = gsListSepr:Explode(oth)
+    for idx = 1, #set do local css = set[idx]
+      if(css ~= "") then tOther.Data[css] = true end
+    end -- Apply the convar blacklist
+  end
+end
+
+-- Configure bullet class black list
+local vanm = PCannonLib.OTHCLASS:GetName()
+cvars.RemoveChangeCallback(vanm, vanm)
+cvars.AddChangeCallback(vanm, function(name, o, n)
+  local tO, tN = gsListSepr:Explode(o), gsListSepr:Explode(n)
+  for idx = 1, #tO do PCannonLib.UpdateBlackList(tO[idx], false) end
+  for idx = 1, #tN do PCannonLib.UpdateBlackList(tN[idx], true) end
+end, vanm); PCannonLib.UpdateBlackList()
+
+--[[
+ * Pick direction with the most weigth
+ * Mainly used to spawn cannon with direction up
+]]
 local tAngle = {
   Data = Angle(),
   "Forward", "Right", "Up"
@@ -47,26 +89,32 @@ function PCannonLib.GetUnit(s, e)
   return (s..gsToolItem..e)
 end
 
+function PCannonLib.GetRadius(mar)
+  return (tonumber(mar) or 0.6)
+end
+
 local function Other(ent, rem)
   if(rem) then ent:Remove() end
   return true
 end
 
-function PCannonLib.GetRadius(mar)
-  return (tonumber(mar) or 0.6)
-end
-
 function PCannonLib.IsOther(ent, rem)
   if(not ent) then return true end
   if(not IsValid(ent)) then return true end
+  local css = ent:GetClass() -- Entity class
+  local vao = tOther.Data[css] -- Other value
+  if(vao ~= nil) then -- Entity class is checked
+    if(vao) then return Other(ent, rem) end
+    return vao -- Entity is not other class
+  end; vao = false -- Assume the entity is not other
   for idx = 1, tOther.Size do -- Integer for loop
     local nam = tOther[idx] -- Retrieve method name
     local src = ent[nam]    -- Index entity method
     if(src) then local s, v = pcall(src, ent)
-      if(not s) then return Other(ent, rem) end
-      if(v) then return Other(ent, rem) end
-    else return Other(ent, rem) end
-  end; return false
+      if(not s) then vao = Other(ent, rem); break end
+      if(v) then vao = Other(ent, rem); break end
+    else vao = Other(ent, rem); break end
+  end; tOther.Data[css] = vao; return vao
 end
 
 -- Send notification to client that something happened
