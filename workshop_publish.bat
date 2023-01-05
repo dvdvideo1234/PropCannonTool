@@ -15,7 +15,7 @@ set gmadName=PropCannonTool
 set gmadCommits=https://github.com/dvdvideo1234/%gmadName%/commit/
 set "gmadPathGIT=C:\Program Files\Git\bin"
 set gmadBinPath=D:\Games\Steam\steamapps\common\GarrysMod\bin
-set gmadADTools=%gmadRevPath%data\propcannon\tools
+set "gmadADTools=%gmadRevPath%data\propcannon\tools"
 set "gmadTime=%date% %time%"
 set gmadID=286474801
 set gmadDirs=(lua)
@@ -35,20 +35,18 @@ IF EXIST Workshop rd /S /Q Workshop
 
 timeout 5
 
-md %gmadRevPath%Workshop\!gmadName!>>!gmadNameLOG!
+md "%gmadRevPath%Workshop\!gmadName!">>!gmadNameLOG!
 for %%i in %gmadDirs% do (
   echo Extracting %%i
   timeout 3
-  xcopy !gmadRevPath!%%i !gmadRevPath!Workshop\!gmadName!\%%i /EXCLUDE:!gmadADTools!\workshop\key.txt /E /C /I /F /R /Y>>!gmadNameLOG!
+  xcopy "!gmadRevPath!%%i" "!gmadRevPath!Workshop\!gmadName!\%%i" /EXCLUDE:!gmadADTools!\workshop\key.txt /E /C /I /F /R /Y>>!gmadNameLOG!
 )
 
-call copy !gmadADTools!\workshop\addon.json !gmadRevPath!Workshop\!gmadName!\addon.json>>!gmadNameLOG!
+call copy "!gmadADTools!\workshop\addon.json" "!gmadRevPath!Workshop\!gmadName!\addon.json">>!gmadNameLOG!
 call "!gmadBinPath!\gmad.exe" create -folder "!gmadRevPath!Workshop\!gmadName!" -out "!gmadRevPath!Workshop\!gmadName!.gma">>!gmadNameLOG!
 
 :: Obtain the latest commit hash from the repository
 call "!gmadPathGIT!\git.exe" rev-parse HEAD>!gmadNameLOG!
-call set /p gmadGitHEAD=<!gmadNameLOG!
-call del !gmadRevPath!!gmadNameLOG!
 
 :: Obtain the log message from the latest revision
 call echo !gmadTime!>!gmadNameLOG!
