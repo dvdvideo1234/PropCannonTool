@@ -35,8 +35,8 @@ is often used by scripted bombs when the fire direction does not correspond to t
   BULLET.CannonNoArm = true -- Forces the cannon not to call the Arm() method when firing
   BULLET.CannonAimAxis = Vector(1,0,0) -- Bullet forward local is used to calculate spawn angle
   BULLET.CannonArmArgs = {1, nil, 2} -- Passes maximum of nine arguments as is to the Arm() method
-  BULLET.CannonEnAlign = true/false -- Enable or disable the bullet velociry aligment
-  BULLET.CannonVeAlign = 10 -- Overrides the server bullet align magnitude eneb owner enabled
+  BULLET.CannonEnAlign = true/false -- Enable or disable the bullet velocity alignment
+  BULLET.CannonVeAlign = 10 -- Overrides the server owner enabled bullet align magnitude
 ```
 
 ![PropCannonTool][ref-screen]
