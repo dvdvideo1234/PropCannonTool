@@ -247,7 +247,7 @@ function ENT:BulletTime(ent, delay)
     if(CurTime() >= dietime) then
       timer.Remove(timekey)
       if(IsValid(ent)) then
-        if(self.fireEntity == ent)
+        if(self.fireEntity == ent) then
           self:WireWrite("LastBullet") end
         constraint.RemoveAll(ent) -- Remove contraints
         ent:SetNoDraw(true)       -- Disable drawing
@@ -260,8 +260,13 @@ function ENT:BulletTime(ent, delay)
 end
 
 function ENT:BulletAlign(ent)
+  if(not ent) then return end
+  if(not ent:IsValid()) then return end
+  local vfa = ent.CannonEnAlign
+  if(vfa == false) then return end
   local vag = PCannonLib.ALGNVELCY:GetFloat()
-  if(vag <= 0) then return end
+  if(vag <= 0) then return end -- Owner disabled
+  vag = (tonumber(ent.CannonVeAlign) or vag)
   local aim, aiv = self:GetBulletAxis(ent), Vector()
   local key = PCannonLib.GetTimerID(ent, "A")
   timer.Create(key, 0, 0, function()
@@ -269,11 +274,13 @@ function ENT:BulletAlign(ent)
       local phy = ent:GetPhysicsObject()
       if(phy and phy:IsValid()) then
         aiv:Set(aim); aiv:Rotate(ent:GetAngles())
-        local vec = ent:GetVelocity():Cross(aiv); vec:Mul(vag)
+        local vec = ent:GetVelocity(); vec:Normalize()
+        vec:Set(vec:Cross(aiv))
+        vec:Mul(-vag * phy:GetMass())
         phy:ApplyTorqueCenter(vec)
       else timer.Remove(key) end
     else timer.Remove(key) end
-  end
+  end)
 end
 
 function ENT:FireOne()

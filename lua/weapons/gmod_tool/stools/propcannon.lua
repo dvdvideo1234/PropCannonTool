@@ -266,6 +266,7 @@ function TOOL:RightClick(tr)
       elseif(ply:KeyDown(IN_USE)) then
         if(PCannonLib.IsOther(trEnt)) then return false else
           PCannonLib.ConCommand(ply, "ammo_type", escs)
+          PCannonLib.ConCommand(ply, "ammo_model", emou)
           PCannonLib.Notify(ply, "Ammo type ["..escs.."] !",  "UNDO"); return true
         end
       else
