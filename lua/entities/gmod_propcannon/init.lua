@@ -122,7 +122,7 @@ function ENT:Setup(numpadKeyAF    , numpadKeyFO, fireForce     ,
   if(self.fireClass == "") then self.fireClass = gsBucs end
   self.fireSpreadX     = math.Clamp(tonumber(fireSpreadX) or 0, 0, 180)
   self.fireSpreadY     = math.Clamp(tonumber(fireSpreadY) or 0, 0, 180)
-  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 1, PCannonLib.FIREMASS:GetFloat())
+  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 0, PCannonLib.FIREMASS:GetFloat())
   self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, PCannonLib.FIREFORCE:GetFloat())
   self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, PCannonLib.FIREDELAY:GetFloat())
   self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, PCannonLib.KILLDELAY:GetFloat())
@@ -353,7 +353,7 @@ function ENT:FireOne()
   self:DeleteOnRemove(ent) -- Remove all bullets when cannon is removed
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
   if(not (uPhys and uPhys:IsValid())) then return end -- Invalid bullet physics
-  uPhys:SetMass(fireMass) -- Apply bullet mass. Requires valid bullet
+  if(fireMass > 0) then uPhys:SetMass(fireMass) end -- Apply bullet mass. Requires valid bullet
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Apply relative velocity
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
   if(iPhys and iPhys:IsValid() and recoilAmount > 0) then -- Valid cannon  physics

@@ -116,7 +116,7 @@ function TOOL:LeftClick(tr)
   local trEnt, trBone = tr.Entity, tr.PhysicsBone
   if(trEnt and trEnt:IsPlayer()) then return false end
   if(not util.IsValidPhysicsObject(trEnt, trBone)) then return false end
-  local ply    = self:GetOwner()
+  local user   = self:GetOwner()
   local direct = self:GetFireDirection()
   local amsprx, amspry = self:GetFireSpread()
   local keyaf  = self:GetClientNumber("keyaf")
@@ -141,8 +141,8 @@ function TOOL:LeftClick(tr)
 
   if(trEnt and trEnt:IsValid() and
      trEnt:GetClass() == gsType and
-     trEnt:GetPlayer() == ply and
-     trEnt:GetCreator() == ply
+     trEnt:GetPlayer() == user and
+     trEnt:GetCreator() == user
   ) then -- Do not update other people stuff
      trEnt:Setup(keyaf , keyfo , force , nil ,
                  ammo  , recoil, delay , kill,
@@ -154,7 +154,7 @@ function TOOL:LeftClick(tr)
   local ang = tr.HitNormal:Angle()
         ang.pitch = ang.pitch + 90
 
-  local eCannon = PCannonLib.Cannon(ply   , tr.HitPos, ang   , keyaf ,
+  local eCannon = PCannonLib.Cannon(user  , tr.HitPos, ang   , keyaf ,
                                     keyfo , force    , model , ammo  ,
                                     recoil, delay    , kill  , power ,
                                     radius, effect   , doboom, direct,
@@ -172,63 +172,63 @@ function TOOL:LeftClick(tr)
       phPhys:EnableMotion(false) end
   end
   undo.Create(gsUnit)
-    undo.SetPlayer(ply)
+    undo.SetPlayer(user)
     undo.AddEntity(eCannon)
     undo.AddEntity(cWeld)
   undo.Finish()
-  ply:AddCleanup(gsLimc, eCannon)
-  ply:AddCleanup(gsLimc, cWeld)
+  user:AddCleanup(gsLimc, eCannon)
+  user:AddCleanup(gsLimc, cWeld)
   return true
 end
 
 function TOOL:RightClick(tr)
   if(CLIENT) then return true end
   local trEnt = tr.Entity
-  local ply = self:GetOwner()
+  local user = self:GetOwner()
   if(not tr.Hit) then return false end
   if(tr.HitWorld) then
-    PCannonLib.ConCommand(ply, "ammo_type", "")
-    PCannonLib.Notify(ply, "Ammo type clear !",  "UNDO"); return true
+    PCannonLib.ConCommand(user, "ammo_type", "")
+    PCannonLib.Notify(user, "Ammo type clear !",  "UNDO"); return true
   else
     if(not IsValid(trEnt)) then return false end
     local escs = trEnt:GetClass()
     local emou = trEnt:GetModel()
     local vmou = util.IsValidModel(emou)
     if(gsType == escs) then
-      if(ply:KeyDown(IN_SPEED)) then
+      if(user:KeyDown(IN_SPEED)) then
         if(not vmou) then return false end
-        PCannonLib.ConCommand(ply, "cannon_model", emou)
-        PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
+        PCannonLib.ConCommand(user, "cannon_model", emou)
+        PCannonLib.Notify(user, "Cannon model: ["..emou.."] !",  "UNDO"); return true
       else
-        PCannonLib.ConCommand(ply, "force", trEnt.fireForce)
-        PCannonLib.ConCommand(ply, "delay", trEnt.fireDelay)
-        PCannonLib.ConCommand(ply, "recoil", trEnt.recoilAmount)
-        PCannonLib.ConCommand(ply, "ammo_mass", trEnt.fireMass)
-        PCannonLib.ConCommand(ply, "ammo_type", trEnt.fireClass)
-        PCannonLib.ConCommand(ply, "kill_delay", trEnt.killDelay)
-        PCannonLib.ConCommand(ply, "ammo_model", trEnt.fireModel)
-        PCannonLib.ConCommand(ply, "fire_effect" , trEnt.fireEffect)
-        PCannonLib.ConCommand(ply, "cannon_model" , trEnt.cannonModel)
-        PCannonLib.ConCommand(ply, "explosive_power" , trEnt.explosivePower)
-        PCannonLib.ConCommand(ply, "explosive_radius" , trEnt.explosiveRadius)
-        PCannonLib.ConCommand(ply, "explosive" , (trEnt.fireExplosives and 1 or 0))
-        PCannonLib.Notify(ply, "Cannon copy !",  "UNDO"); return true
+        PCannonLib.ConCommand(user, "force", trEnt.fireForce)
+        PCannonLib.ConCommand(user, "delay", trEnt.fireDelay)
+        PCannonLib.ConCommand(user, "recoil", trEnt.recoilAmount)
+        PCannonLib.ConCommand(user, "ammo_mass", trEnt.fireMass)
+        PCannonLib.ConCommand(user, "ammo_type", trEnt.fireClass)
+        PCannonLib.ConCommand(user, "kill_delay", trEnt.killDelay)
+        PCannonLib.ConCommand(user, "ammo_model", trEnt.fireModel)
+        PCannonLib.ConCommand(user, "fire_effect" , trEnt.fireEffect)
+        PCannonLib.ConCommand(user, "cannon_model" , trEnt.cannonModel)
+        PCannonLib.ConCommand(user, "explosive_power" , trEnt.explosivePower)
+        PCannonLib.ConCommand(user, "explosive_radius" , trEnt.explosiveRadius)
+        PCannonLib.ConCommand(user, "explosive" , (trEnt.fireExplosives and 1 or 0))
+        PCannonLib.Notify(user, "Cannon copy !",  "UNDO"); return true
       end
     else
-      if(ply:KeyDown(IN_SPEED)) then
+      if(user:KeyDown(IN_SPEED)) then
         if(not vmou) then return false end
-        PCannonLib.ConCommand(ply, "cannon_model", emou)
-        PCannonLib.Notify(ply, "Cannon model: ["..emou.."] !",  "UNDO"); return true
-      elseif(ply:KeyDown(IN_USE)) then
+        PCannonLib.ConCommand(user, "cannon_model", emou)
+        PCannonLib.Notify(user, "Cannon model: ["..emou.."] !",  "UNDO"); return true
+      elseif(user:KeyDown(IN_USE)) then
         if(PCannonLib.IsOther(trEnt)) then return false else
-          PCannonLib.ConCommand(ply, "ammo_type", escs)
-          PCannonLib.ConCommand(ply, "ammo_model", emou)
-          PCannonLib.Notify(ply, "Ammo type ["..escs.."] !",  "UNDO"); return true
+          PCannonLib.ConCommand(user, "ammo_type", escs)
+          PCannonLib.ConCommand(user, "ammo_model", emou)
+          PCannonLib.Notify(user, "Ammo type ["..escs.."] !",  "UNDO"); return true
         end
       else
         if(not vmou) then return false end
-        PCannonLib.ConCommand(ply, "ammo_model", emou)
-        PCannonLib.Notify(ply, "Ammo model: ["..emou.."] !",  "UNDO"); return true
+        PCannonLib.ConCommand(user, "ammo_model", emou)
+        PCannonLib.Notify(user, "Ammo model: ["..emou.."] !",  "UNDO"); return true
       end
     end; return false
   end
@@ -237,19 +237,19 @@ end
 function TOOL:Reload(tr)
   if(CLIENT) then return true end
   if(not tr.Hit) then return false end
-  local ply, trEnt = self:GetOwner(), tr.Entity
+  local user, trEnt = self:GetOwner(), tr.Entity
   if(not IsValid(trEnt)) then return false end
+  local ownr = PCannonLib.GetOwner(trEnt)
   if(trEnt:GetClass() == gsType) then
-    if(trEnt:GetPlayer() ~= ply) then return false end
-    if(trEnt:GetCreator() ~= ply) then return false end
-    trEnt:Remove(); return true
-  else
-    local can = trEnt:GetOwner()
-    if(not IsValid(can)) then return false end
-    if(can:GetPlayer() ~= ply) then return false end
-    if(can:GetCreator() ~= ply) then return false end
-    if(trEnt:GetClass() ~= gsType) then return false end
-    trEnt:Remove(); return true
+    if(ownr == user or user:IsAdmin()) then
+      trEnt:Remove(); return true end; return false
+  else -- Try to remove the cannon bullets
+    local cann = trEnt:GetOwner()
+    if(not IsValid(cann)) then return false end
+    if(cann:GetClass() ~= gsType) then return false end
+    local ownr = PCannonLib.GetOwner(cann)
+    if(ownr == user or user:IsAdmin()) then
+      trEnt:Remove(); return true end; return false
   end
 end
 
@@ -345,7 +345,7 @@ function TOOL.BuildCPanel(cp)
   cp:AddPanel(pItem)
   -- Cannon setup values
   PCannonLib.NumSlider(cp, "force"           , 0, PCannonLib.FIREFORCE:GetFloat(), gtConvarList, iDecm)
-  PCannonLib.NumSlider(cp, "ammo_mass"       , 1, PCannonLib.FIREMASS:GetFloat() , gtConvarList, iDecm)
+  PCannonLib.NumSlider(cp, "ammo_mass"       , 0, PCannonLib.FIREMASS:GetFloat() , gtConvarList, iDecm)
   PCannonLib.NumSlider(cp, "delay"           , 0, PCannonLib.FIREDELAY:GetFloat(), gtConvarList, iDecm)
   PCannonLib.NumSlider(cp, "recoil"          , 0, PCannonLib.RECAMOUNT:GetFloat(), gtConvarList, iDecm)
   PCannonLib.NumSlider(cp, "kill_delay"      , 0, PCannonLib.KILLDELAY:GetFloat(), gtConvarList, iDecm)
@@ -371,9 +371,9 @@ function TOOL.BuildCPanel(cp)
   local tA = list.GetForEdit("CannonAmmoModels")
   for iA = 1, #tA do
     local pIcon = pProp:AddModel(tA[iA])
-    function pIcon:DoClick() local ply = LocalPlayer()
-      PCannonLib.ConCommand(ply, "ammo_type", "")
-      PCannonLib.ConCommand(ply, "ammo_model", self.Model)
+    function pIcon:DoClick() local user = LocalPlayer()
+      PCannonLib.ConCommand(user, "ammo_type", "")
+      PCannonLib.ConCommand(user, "ammo_model", self.Model)
     end
   end; cp:AddPanel(pProp)
   -- Coordinate system
