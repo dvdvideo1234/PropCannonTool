@@ -103,7 +103,7 @@ function ENT:Setup(numpadKeyAF    , numpadKeyFO, fireForce     ,
                    fireDelay      , killDelay  , explosivePower,
                    explosiveRadius, fireEffect , fireExplosives,
                    fireDirection  , fireMass   , fireClass     , fireSpreadX, fireSpreadY)
-  local ply = self:GetPlayer()
+  local ply            = self:GetPlayer()
   self.fireExplosives  = tobool(fireExplosives)
   self.fireEffect      = tostring(fireEffect or "")
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)

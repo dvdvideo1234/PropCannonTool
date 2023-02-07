@@ -139,9 +139,9 @@ function TOOL:LeftClick(tr)
           util.IsValidModel(ammo)  and
           util.IsValidProp (ammo))) then return false end
 
-  if(trEnt and trEnt:IsValid() and
-     trEnt:GetClass() == gsType and
-     trEnt:GetPlayer() == user and
+  if(trEnt and trEnt:IsValid()    and
+     trEnt:GetClass()   == gsType and
+     trEnt:GetPlayer()  == user   and
      trEnt:GetCreator() == user
   ) then -- Do not update other people stuff
      trEnt:Setup(keyaf , keyfo , force , nil ,
@@ -151,7 +151,7 @@ function TOOL:LeftClick(tr)
     return true -- Model automatically polulated to avoid difference in visuals and collisions
   end
 
-  local ang = tr.HitNormal:Angle()
+  local ang, cwe = tr.HitNormal:Angle(), nil
         ang.pitch = ang.pitch + 90
 
   local eCannon = PCannonLib.Cannon(user  , tr.HitPos, ang   , keyaf ,
@@ -162,22 +162,24 @@ function TOOL:LeftClick(tr)
   if(not (eCannon and eCannon:IsValid())) then return false end
   eCannon:SetPos(tr.HitPos - tr.HitNormal * eCannon:OBBMins().z)
 
-  local cWeld
   if(trEnt and trEnt:IsValid()) then
-    cWeld = constraint.Weld(eCannon, trEnt, 0, tr.PhysicsBone, 0)
+    cwe = constraint.Weld(eCannon, trEnt, 0, tr.PhysicsBone, 0)
     trEnt:DeleteOnRemove(eCannon)
   else
     local phPhys = eCannon:GetPhysicsObject()
     if(phPhys and phPhys:IsValid()) then
       phPhys:EnableMotion(false) end
   end
+
   undo.Create(gsUnit)
     undo.SetPlayer(user)
     undo.AddEntity(eCannon)
-    undo.AddEntity(cWeld)
+    if(cwe) then undo.AddEntity(cwe) end
   undo.Finish()
+
   user:AddCleanup(gsLimc, eCannon)
-  user:AddCleanup(gsLimc, cWeld)
+  if(cwe) then user:AddCleanup(gsLimc, cwe) end
+
   return true
 end
 
