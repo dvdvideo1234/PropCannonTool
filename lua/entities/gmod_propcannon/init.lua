@@ -273,8 +273,11 @@ function ENT:BulletAlign(ent)
     if(ent and ent:IsValid()) then
       local phy = ent:GetPhysicsObject()
       if(phy and phy:IsValid()) then
-        aiv:Set(aim); aiv:Rotate(ent:GetAngles())
+        -- TODO: Stop alignment when game is paused
+        -- TODO: Bullet recieve crazy angular velocity
+        -- TODO: Bullet forrce is mismatched and misaligned
         local vec = ent:GetVelocity(); vec:Normalize()
+        aiv:Set(aim); aiv:Rotate(ent:GetAngles())
         vec:Set(vec:Cross(aiv))
         vec:Mul(-vag * phy:GetMass())
         phy:ApplyTorqueCenter(vec)
