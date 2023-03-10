@@ -57,8 +57,8 @@ function ENT:Initialize()
   self.fireEffect      = "Explosion"
   self.fireExplosives  = true
   self.fireMass        = 120 -- Mass with optimal distance for projectile
-  self.fireDirection   = Vector(0,0,1) -- Default UP
-  self.fireAimAxis     = Vector(0,0,1) -- Default bullet aim axis
+  self.fireDirection   = PCannonLib.GetAimAxis() -- Default UP
+  self.fireAimAxis     = PCannonLib.GetAimAxis() -- Default bullet aim axis
 
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
@@ -276,11 +276,13 @@ function ENT:BulletAlign(ent)
         -- TODO: Stop alignment when game is paused
         -- TODO: Bullet recieve crazy angular velocity
         -- TODO: Bullet forrce is mismatched and misaligned
-        local vec = ent:GetVelocity(); vec:Normalize()
-        aiv:Set(aim); aiv:Rotate(ent:GetAngles())
-        vec:Set(vec:Cross(aiv))
-        vec:Mul(-vag * phy:GetMass())
-        phy:ApplyTorqueCenter(vec)
+        if(not (game.SinglePlayer() and FrameTime() == 0))
+          local vec = ent:GetVelocity(); vec:Normalize()
+          aiv:Set(aim); aiv:Rotate(ent:GetAngles())
+          vec:Set(vec:Cross(aiv))
+          vec:Mul(-vag * phy:GetMass())
+          phy:ApplyTorqueCenter(vec)
+        and
       else timer.Remove(key) end
     else timer.Remove(key) end
   end)

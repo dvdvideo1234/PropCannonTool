@@ -38,7 +38,7 @@ function ENT:GetBulletAxis(ent)
   if(not ent:IsValid()) then return Vector() end
   local aim = ent.CannonAimAxis
   if(not aim) then aim = self.fireAimAxis end
-  if(not aim) then return Vector(0,0,1) end
+  if(not aim) then return PCannonLib.GetAimAxis() end
   return Vector(aim)
 end
 
