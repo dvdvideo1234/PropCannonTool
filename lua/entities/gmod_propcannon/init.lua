@@ -57,8 +57,8 @@ function ENT:Initialize()
   self.fireEffect      = "Explosion"
   self.fireExplosives  = true
   self.fireMass        = 120 -- Mass with optimal distance for projectile
-  self.fireDirection   = Vector(0,0,1) -- Default UP
-  self.fireAimAxis     = Vector(0,0,1) -- Default bullet aim axis
+  self.fireDirection   = PCannonLib.GetAimAxis() -- Default UP
+  self.fireAimAxis     = PCannonLib.GetAimAxis() -- Default bullet aim axis
 
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
@@ -267,20 +267,22 @@ function ENT:BulletAlign(ent)
   local vag = PCannonLib.ALGNVELCY:GetFloat()
   if(vag <= 0) then return end -- Owner disabled
   vag = (tonumber(ent.CannonVeAlign) or vag)
-  local aim, aiv = self:GetBulletAxis(ent), Vector()
+  local aiv, err, ero = Vector(), Vector(), Vector()
+  local aim = self:GetBulletAxis(ent)
   local key = PCannonLib.GetTimerID(ent, "A")
   timer.Create(key, 0, 0, function()
     if(ent and ent:IsValid()) then
       local phy = ent:GetPhysicsObject()
       if(phy and phy:IsValid()) then
-        -- TODO: Stop alignment when game is paused
-        -- TODO: Bullet recieve crazy angular velocity
-        -- TODO: Bullet forrce is mismatched and misaligned
-        local vec = ent:GetVelocity(); vec:Normalize()
-        aiv:Set(aim); aiv:Rotate(ent:GetAngles())
-        vec:Set(vec:Cross(aiv))
-        vec:Mul(-vag * phy:GetMass())
-        phy:ApplyTorqueCenter(vec)
+        local mas, ftm = phy:GetMass(), FrameTime()
+        if(ftm > 0) then -- PD controller to flip bullet
+          local vec = ent:GetVelocity(); vec:Normalize()
+          aiv:Set(aim); aiv:Rotate(ent:GetAngles())
+          err:Set(vec:Cross(aiv))
+          aiv:Set(err); aiv:Sub(ero); aiv:Mul(1/ftm)
+          aiv:Add(err); aiv:Mul(mas * -vag)
+          phy:ApplyTorqueCenter(aiv); ero:Set(err)
+        end -- No frame time. No force applied
       else timer.Remove(key) end
     else timer.Remove(key) end
   end)

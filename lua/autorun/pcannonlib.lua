@@ -193,6 +193,10 @@ function PCannonLib.Cannon(ply   , pos   , ang   , keyaf ,
   return ent
 end
 
+function PCannonLib.GetAimAxis()
+  return Vector(0,0,1)
+end
+
 --[[
  * Attempts to find the non-rotated UP direction
  * based on the provided forward direction
