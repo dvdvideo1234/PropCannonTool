@@ -11,6 +11,16 @@ local gsUnit = PCannonLib.GetUnit()
 local gsType = PCannonLib.GetUnit("gmod_")
 local gsCall = PCannonLib.GetUnit(nil, "_numpad_keys")
 
+local cvFIREMASS  = PCannonLib.FIREMASS
+local cvFIREFORCE = PCannonLib.FIREFORCE
+local cvFIREDELAY = PCannonLib.FIREDELAY
+local cvKILLDELAY = PCannonLib.KILLDELAY
+local cvRECAMOUNT = PCannonLib.RECAMOUNT
+local cvEXPPOWER  = PCannonLib.EXPPOWER
+local cvEXPRADIUS = PCannonLib.EXPRADIUS
+local cvEFFECTSCL = PCannonLib.EFFECTSCL
+local cvALGNVELCY = PCannonLib.ALGNVELCY
+
 function ENT:RemoveNumpad(...)
   local iD, tA = 1, {...}
   for iD = 1, #tA do
@@ -122,13 +132,13 @@ function ENT:Setup(numpadKeyAF    , numpadKeyFO, fireForce     ,
   if(self.fireClass == "") then self.fireClass = gsBucs end
   self.fireSpreadX     = math.Clamp(tonumber(fireSpreadX) or 0, 0, 180)
   self.fireSpreadY     = math.Clamp(tonumber(fireSpreadY) or 0, 0, 180)
-  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 0, PCannonLib.FIREMASS:GetFloat())
-  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, PCannonLib.FIREFORCE:GetFloat())
-  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, PCannonLib.FIREDELAY:GetFloat())
-  self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, PCannonLib.KILLDELAY:GetFloat())
-  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, PCannonLib.RECAMOUNT:GetFloat())
-  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, PCannonLib.EXPPOWER:GetFloat())
-  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, PCannonLib.EXPRADIUS:GetFloat())
+  self.fireMass        = math.Clamp(tonumber(fireMass) or 0, 0, cvFIREMASS:GetFloat())
+  self.fireForce       = math.Clamp(tonumber(fireForce) or 0, 0, cvFIREFORCE:GetFloat())
+  self.fireDelay       = math.Clamp(tonumber(fireDelay) or 0, 0, cvFIREDELAY:GetFloat())
+  self.killDelay       = math.Clamp(tonumber(killDelay) or 0, 0, cvKILLDELAY:GetFloat())
+  self.recoilAmount    = math.Clamp(tonumber(recoilAmount) or 0, 0, cvRECAMOUNT:GetFloat())
+  self.explosivePower  = math.Clamp(tonumber(explosivePower)  or 0, 0, cvEXPPOWER:GetFloat())
+  self.explosiveRadius = math.Clamp(tonumber(explosiveRadius) or 0, 0, cvEXPRADIUS:GetFloat())
   self.fireDirection:Set(fireDirection)
   if(self.fireDirection:LengthSqr() > 0) then -- The user or constructor can pass any value
     self.fireDirection:Normalize() -- Normalize the vector when there is some length
@@ -264,9 +274,13 @@ function ENT:BulletAlign(ent)
   if(not ent:IsValid()) then return end
   local vfa = ent.CannonEnAlign
   if(vfa == false) then return end
-  local vag = PCannonLib.ALGNVELCY:GetFloat()
+  local vag = cvALGNVELCY:GetFloat()
   if(vag <= 0) then return end -- Owner disabled
-  vag = (tonumber(ent.CannonVeAlign) or vag)
+  local vmn = cvALGNVELCY:GetMin()
+  local vmx = cvALGNVELCY:GetMax()
+  local can = tonumber(ent.CannonVeAlign)
+  local vam = math.Clamp(can or vag, vmn, vmx)
+  if(vam <= 0) then return end -- Override disable
   local aiv, err, ero = Vector(), Vector(), Vector()
   local aim = self:GetBulletAxis(ent)
   local key = PCannonLib.GetTimerID(ent, "A")
@@ -278,9 +292,9 @@ function ENT:BulletAlign(ent)
         if(ftm > 0) then -- PD controller to flip bullet
           local vec = ent:GetVelocity(); vec:Normalize()
           aiv:Set(aim); aiv:Rotate(ent:GetAngles())
-          err:Set(vec:Cross(aiv))
-          aiv:Set(err); aiv:Sub(ero); aiv:Mul(1/ftm)
-          aiv:Add(err); aiv:Mul(mas * -vag)
+          err:Set(vec:Cross(aiv)) -- Current error
+          aiv:Set(err); aiv:Sub(ero); aiv:Mul(1 / ftm)
+          aiv:Add(err); aiv:Mul(mas * -vam)
           phy:ApplyTorqueCenter(aiv); ero:Set(err)
         end -- No frame time. No force applied
       else timer.Remove(key) end
@@ -326,8 +340,8 @@ function ENT:FireOne()
   local dir = self:GetFireDirection() -- Bullet fire diection
   local pos = self:LocalToWorld(self:OBBCenter())
   if(fireEffect ~= "" and fireEffect ~= "none") then
-    local mer = (fireForce / PCannonLib.FIREFORCE:GetFloat())
-    eff:SetScale(mer * PCannonLib.EFFECTSCL:GetFloat())
+    local mer = (fireForce / cvFIREFORCE:GetFloat())
+    eff:SetScale(mer * cvEFFECTSCL:GetFloat())
     eff:SetOrigin(pos); eff:SetStart(pos)
     util.Effect(fireEffect, eff, true, true)
   end -- Finish creating effect. Some effect do not use scalling

@@ -16,6 +16,9 @@ ENT.AdminSpawnable = false
 local gsBucs = "cannon_prop"
 local gsUnit = PCannonLib.GetUnit()
 
+local cvEXPRADIUS = PCannonLib.EXPRADIUS
+local cvEFFECTSCL = PCannonLib.EFFECTSCL
+
 AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
 include(gsUnit.."/wire_wrapper.lua")
 
@@ -66,8 +69,8 @@ function ENT:Explode(dmgInfo)
   if(self and self:IsValid() and own and own:IsValid()) then
     local eff = self.effectDataClass -- Use the cached effect
     if(eff) then -- Draw effect as long as it is present
-      local mer = (rad / PCannonLib.EXPRADIUS:GetFloat())
-      eff:SetScale(mer * PCannonLib.EFFECTSCL:GetFloat())
+      local mer = (rad / cvEXPRADIUS:GetFloat())
+      eff:SetScale(mer * cvEFFECTSCL:GetFloat())
       eff:SetStart(pos); eff:SetOrigin(pos)
       util.Effect("Explosion", eff, true, true)
     end -- When damage information is passed `OnTakeDamage`
