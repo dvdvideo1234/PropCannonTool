@@ -67,8 +67,8 @@ function ENT:Initialize()
   self.fireEffect      = "Explosion"
   self.fireExplosives  = true
   self.fireMass        = 120 -- Mass with optimal distance for projectile
-  self.fireDirection   = PCannonLib.GetAimAxis() -- Default UP
-  self.fireAimAxis     = PCannonLib.GetAimAxis() -- Default bullet aim axis
+  self.fireDirection   = PCannonLib.GetAimAxis(true) -- Default UP
+  self.fireAimAxis     = PCannonLib.GetAimAxis(true) -- Default bullet aim axis
 
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end

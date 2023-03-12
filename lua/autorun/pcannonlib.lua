@@ -4,6 +4,7 @@ local gsFormHead     = "[%s] %s > %s: "
 local gsFormItem     = " {%s}"
 local gsToolItem     = "propcannon"
 local gsListSepr     = "#"
+local gvAimAxis      = Vector(0,0,1)
 local gsTimerID      = "%s-%d-%s"
 local gsGmodLimc     = gsToolItem.."s"
 local gsFormIcon     = "icon16/%s.png"
@@ -193,8 +194,9 @@ function PCannonLib.Cannon(ply   , pos   , ang   , keyaf ,
   return ent
 end
 
-function PCannonLib.GetAimAxis()
-  return Vector(0,0,1)
+function PCannonLib.GetAimAxis(new)
+  if(not new) then return gvAimAxis end
+  return Vector(gvAimAxis)
 end
 
 --[[

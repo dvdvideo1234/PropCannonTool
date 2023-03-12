@@ -30,16 +30,17 @@ if(not file.Exists(gsUnit.."_tool","DATA")) then
 end
 
 --[[
- * Returns the bullet forward aim
- * axis as a local vector
+ * Returns bullet forward aim axis local vector
+ * It will return new constructed vector
+ * ent > Bullet entity
 ]]
 function ENT:GetBulletAxis(ent)
   if(not ent) then return Vector() end
   if(not ent:IsValid()) then return Vector() end
   local aim = ent.CannonAimAxis
   if(not aim) then aim = self.fireAimAxis end
-  if(not aim) then return PCannonLib.GetAimAxis() end
-  return Vector(aim)
+  if(not aim) then aim = PCannonLib.GetAimAxis() end
+  return Vector(aim) -- Copy of aim axis vector
 end
 
 function ENT:BulletAng(ent, dir)
