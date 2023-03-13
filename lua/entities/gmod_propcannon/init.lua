@@ -166,14 +166,14 @@ end
 
 function ENT:GetFireDirection()
   local sdir = Vector(self.fireDirection) -- Read direction
-  local sang = self.fireDirection:AngleEx(self.fireUpDirAxis)
-        sang = self:LocalToWorldAngles(sang)
   local wdir = self:WireRead("FireDirection", true)
   if(wdir ~= nil) then sdir:Set(wdir) -- Override using wire
     if(sdir:LengthSqr() > 0) then -- Wire input can pass any value
       sdir:Normalize() -- Normalize the vector when there is some length
     else sdir.z = 1 end -- Make sure the fire direction length is equal to 1
   end -- Assume that the wire user does not need to use HUD update
+  local sang = sdir:AngleEx(self.fireUpDirAxis)
+        sang = self:LocalToWorldAngles(sang)
   if(self.fireSpreadX > 0 or self.fireSpreadY > 0) then
     local axsX, axsY = sang:Up(), sang:Right()
     sang:RotateAroundAxis(axsX, self.fireSpreadX * (math.random() - 0.5))
@@ -197,7 +197,7 @@ function ENT:FireDisable()
 end
 
 function ENT:CanFire()
-  return (self.nextFire <= CurTime())
+  return (CurTime() >= self.nextFire)
 end
 
 function ENT:Think()
