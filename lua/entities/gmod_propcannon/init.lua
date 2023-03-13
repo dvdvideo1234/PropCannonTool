@@ -371,13 +371,14 @@ function ENT:FireOne()
   self:BulletTime(ent, killDelay) -- Spawn a timer to deal with kill delay
   self:DeleteOnRemove(ent) -- Remove all bullets when cannon is removed
   local iPhys, uPhys = self:GetPhysicsObject(), ent:GetPhysicsObject()
-  if(not (uPhys and uPhys:IsValid())) then return end -- Invalid bullet physics
+  if(not (uPhys and uPhys:IsValid())) then ent:Remove(); return end -- Invalid bullet physics
   if(fireMass > 0) then uPhys:SetMass(fireMass) end -- Apply bullet mass. Requires valid bullet
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Apply relative velocity
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
-  if(iPhys and iPhys:IsValid() and recoilAmount > 0) then -- Valid cannon  physics
-    iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) -- Recoil amount
-  end -- Recoil. The cannon could work without a valid physics model.
+  if(iPhys and iPhys:IsValid()) then -- Valid cannon physics then continue
+    if(recoilAmount > 0) then -- Try to apply recoil amount to cannon gun physics
+      iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) end -- Recoil amount
+  else self:Remove(); return end -- The cannon could work without a valid physics model
   self:WireWrite("Fired", 0)
   ent.Owner:AddCount("props", ent)
   ent.Owner:AddCleanup("props", ent)
