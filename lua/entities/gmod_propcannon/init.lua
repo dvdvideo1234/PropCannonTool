@@ -223,7 +223,7 @@ function ENT:BulletArm(ent)
   local css = ent:GetClass()
   if(gsBucs == css) then return end
   if(ent.CannonNoArm) then return end
-  if(not ent.explosive) then return end
+  if(not ent.isExplosive) then return end
   local arm, set = ent.Arm, ent.CannonArmArgs
   if(arm) then -- Arm method is available
     if(set ~= nil) then -- Arm method has extern arguments
@@ -349,8 +349,8 @@ function ENT:FireOne()
   self:WireWrite("LastBullet", ent) -- Write last bullet here
   ent.Owner = ply -- For prop protection and ownership addons
   ent.owner = ply -- For prop protection and ownership addons
-  ent.exploded = false -- Prevents bullet infinite recursion
-  ent.explosive = fireExplosives -- Explosive props parameter flag
+  ent.isExploded = false -- Prevents bullet infinite recursion
+  ent.isExplosive = fireExplosives -- Explosive props parameter flag
   ent.explosiveRadius = explosiveRadius  -- Explosion blast radius
   ent.explosivePower  = explosivePower   -- Explosion blast power
   ent:SetCollisionGroup(COLLISION_GROUP_NONE) -- Bullet standard collisions

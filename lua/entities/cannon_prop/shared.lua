@@ -42,7 +42,7 @@ function ENT:Initialize()
   if(not IsValid(self.Owner)) then self.Owner = self end
   self.effectDataClass = EffectData()
   self:SetPhysicsAttacker(self.Owner)
-  self.exploded = false
+  self.isExploded = false
   local phys = self:GetPhysicsObject()
   if(phys and phys:IsValid()) then phys:Wake() end
 
@@ -57,14 +57,14 @@ hook.Add("EntityTakeDamage", gsUnit.."_crediting",
   end)
 
 function ENT:Explode(dmgInfo)
-  if(self.exploded) then return end
+  if(self.isExploded) then return end
   -- Make sure we set the explode flag here, otherwise recursion
   -- will take place in `OnTakeDamage` and the game will crash !
-  self.exploded = true -- The `exploded` flag is right where it needs to be
-  local own = self.Owner
-  local pos = self:GetPos()
-  local pow = self.explosivePower
-  local rad = self.explosiveRadius
+  self.isExploded = true -- Flag this bullet as exploded
+  local own = self.Owner -- Bullet owner. Usually the player
+  local pos = self:GetPos() -- Bullet position for blast damage
+  local pow = self.explosivePower -- Bullet explosion power
+  local rad = self.explosiveRadius -- Bullet explosion radius
   -- This will call `OnTakeDamage` internally and trigger a chain explosions
   if(self and self:IsValid() and own and own:IsValid()) then
     local eff = self.effectDataClass -- Use the cached effect
@@ -83,7 +83,7 @@ function ENT:Explode(dmgInfo)
 end
 
 function ENT:OnTakeDamage(dmgInfo)
-  if(self.explosive) then self:Explode(dmgInfo) end
+  if(self.isExplosive) then self:Explode(dmgInfo) end
   self:TakePhysicsDamage(dmgInfo)
 end
 
@@ -94,7 +94,7 @@ end
 
 local function doBoom(self)
   if(not (self and self:IsValid())) then return end
-  if(self.explosive) then self:Explode() end
+  if(self.isExplosive) then self:Explode() end
 end
 
 -- Even a tiny flinch can set it off
