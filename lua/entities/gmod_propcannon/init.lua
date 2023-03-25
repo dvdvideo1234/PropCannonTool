@@ -290,7 +290,7 @@ function ENT:BulletAlign(ent)
       if(phy and phy:IsValid()) then
         local mas, ftm = phy:GetMass(), FrameTime()
         if(ftm > 0) then -- PD controller to flip bullet
-          local vec = ent:GetVelocity(); vec:Normalize()
+          local vec = phy:GetVelocity(); vec:Normalize()
           aiv:Set(aim); aiv:Rotate(ent:GetAngles())
           err:Set(vec:Cross(aiv)) -- Current error
           aiv:Set(err); aiv:Sub(ero); aiv:Mul(1 / ftm)
