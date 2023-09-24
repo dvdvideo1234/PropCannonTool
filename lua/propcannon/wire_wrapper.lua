@@ -1,16 +1,23 @@
+-- Wrapper for: https://github.com/wiremod/wire/blob/master/lua/wire/server/wirelib.lua
+
 --[[
- * For override
- * Defines what should happen when
- * error in wire is found
+ * Helper routine factory for `WirePostEntityPaste`
+ * Returns wire specific and related entity picker
+ * cre > Created entity set by the duplicator
 ]]
-function ENT:WireError(sM)
-  local tI = debug.getinfo(2)
-  local sM = tostring(sM or "")
-  local sN = tI and tI.name or "Incognito"
-  local sO = tostring(self).."."..sN..sM
-  self:Print(sO); ErrorNoHalt(sO.."\n"); self:Remove()
+local function wireLookup(cre)
+  return function(id, def)
+    if(id == nil) then return def
+    elseif(id == 0) then return game.GetWorld() end
+    local ent = cre[id] or (isnumber(id) and ents.GetByIndex(id))
+    if(IsValid(ent)) then return ent else return def end
+  end
 end
 
+--[[
+ * Unpacks the ports information to prepare them for wire library
+ * Trims any blank spaces from the configuration and applies defaults
+]]
 local function wireUnpackPortInfo(tP)
   if(not WireLib) then return nil end
   local sN, sT, sD = tP[1], tP[2], tP[3]
@@ -20,6 +27,13 @@ local function wireUnpackPortInfo(tP)
   return sN, sT, sD
 end
 
+--[[
+ * Setups the ports information and calls the wire library
+ * oE > Entity which white ports are being configured
+ * sF > Function name of the wite library being called
+ * tI > Ports information table name/type/desription
+ * bL > The wire function can process a single port at a time
+]]
 local function wireSetupPorts(oE, sF, tI, bL)
   if(not WireLib) then return oE end
   local iD, tN, tT, tD = 1, {}, {}, {}
@@ -42,15 +56,51 @@ local function wireSetupPorts(oE, sF, tI, bL)
 end
 
 --[[
- * Used to inder a wite port and return its data
- * sK > Port key `Input` or `Output`
+ * For override. Change as you please to handle errors
+ * Defines what should happen when error in wire is found
+]]
+function ENT:WireError(sM)
+  local tI, sM = debug.getinfo(2), tostring(sM or "")
+  local sN = tI and tI.name or "Incognito"
+  local sO = tostring(self).."."..sN..": "..sM
+  self:Remove(); error(sO.."\n")
+end
+
+--[[
+ * Used to check if a given input exists
  * sN > Port name must be string
 ]]
-function ENT:WireIndex(sK, sN)
+function ENT:WireIsInput(sN)
   if(not WireLib) then return nil end
-  if(sN == nil) then self:WireError("("..sK.."): Name invalid"); return nil end
-  local tP, sP = self[sK], tostring(sN); tP = (tP and tP[sP] or nil)
-  if(tP == nil) then self:WireError("("..sK..")("..sP.."): Port missing"); return tP, sP end
+  if(sN == nil) then self:WireError("Name missing"); return nil end
+  local tP, sP = self["Inputs"], tostring(sN); tP = (tP and tP[sP] or nil)
+  return (tP ~= nil)
+end
+
+--[[
+ * Used to check if a given input exists
+ * sN > Port name must be string
+]]
+function ENT:WireIsOutput(sN)
+  if(not WireLib) then return nil end
+  if(sN == nil) then self:WireError("Name missing"); return nil end
+  local tP, sP = self["Outputs"], tostring(sN); tP = (tP and tP[sP] or nil)
+  return (tP ~= nil)
+end
+
+--[[
+ * Used to index a wite port and return its content
+ * sT > Port key `Input` or `Output`
+ * sN > Port name must be string
+]]
+local widx = {["Inputs"] = true, ["Outputs"] = true}
+function ENT:WireIndex(sT, sN)
+  if(not WireLib) then return nil end
+  if(sT == nil) then self:WireError("Type missing"); return nil end
+  if(not widx[sT]) then self:WireError("("..tostring(sT).."): Type invalid"); return nil end
+  if(sN == nil) then self:WireError("("..sT.."): Name missing"); return nil end
+  local tP, sP = self[sT], tostring(sN); tP = (tP and tP[sP] or nil)
+  if(tP == nil) then self:WireError("("..sT..")("..sP.."): Name invalid"); return tP, sP end
   return tP, sP -- Returns the dedicated indexed wire I/O port and name
 end
 
@@ -133,30 +183,19 @@ function ENT:WirePreEntityCopy()
 end
 
 --[[
- * Function. Helper routine for `WirePostEntityPaste`
- * Returns wire specific and related entity picker
-]]
-local function EntityLookup(created)
-  return function(id, default)
-    if(id == nil) then return default
-    elseif(id == 0) then return game.GetWorld() end
-    local ent = created[id] or (isnumber(id) and ents.GetByIndex(id))
-    if(IsValid(ent)) then return ent else return default end
-  end
-end
-
---[[
  * Procedure. Must be run inside `ENT:PostEntityPaste`
  * Makes wire do the post-paste preparation for dupe info
- * Usage: function ENT:PostEntityPaste(ply, ent, created)
-            self:WirePostEntityPaste(ply, ent, created) end
+ * Usage: function ENT:PostEntityPaste(player, entity, created)
+            self:WirePostEntityPaste(player, entity, created) end
+ * ply > The player calling the routune
+ * ent > The entity being post-pasted
+ * cre > The created entities list after paste
 ]]
-function ENT:WirePostEntityPaste(ply, ent, created)
+function ENT:WirePostEntityPaste(ply, ent, cre)
   if(not WireLib) then return self end
   if(not ent.EntityMods) then return self end
   if(not ent.EntityMods.WireDupeInfo) then return self end
-  self:WireApplyDupeInfo(ply, ent,
-    ent.EntityMods.WireDupeInfo, EntityLookup(created))
+  self:WireApplyDupeInfo(ply, ent, ent.EntityMods.WireDupeInfo, wireLookup(cre))
   return self
 end
 
@@ -174,8 +213,8 @@ end
 --[[
  * Writes to a port of a wire able entity
  * sN > The output name to write
- * vD > The data to write
- * bT > Set to true to force data type check
+ * vD > The wire port content to write
+ * bT > Set to true to force type check
 ]]
 function ENT:WireWrite(sN, vD, bT)
   if(not WireLib) then return self end; local tP, sP = self:WireIndex("Outputs", sN)
