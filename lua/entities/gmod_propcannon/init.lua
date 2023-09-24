@@ -32,12 +32,12 @@ function ENT:PreEntityCopy()
   self:WirePreEntityCopy()
 end
 
-function ENT:PostEntityPaste(ply, ent, created)
-  self:WirePostEntityPaste(ply, ent, created)
+function ENT:PostEntityPaste(ply, ent, cre)
+  self:WirePostEntityPaste(ply, ent, cre)
 end
 
-function ENT:ApplyDupeInfo(ply, ent, info, fentid)
-  self:WireApplyDupeInfo(ply, ent, info, fentid)
+function ENT:ApplyDupeInfo(ply, ent, info, feid)
+  self:WireApplyDupeInfo(ply, ent, info, feid)
 end
 
 function ENT:Initialize()
