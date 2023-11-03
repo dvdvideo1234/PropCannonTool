@@ -1,5 +1,9 @@
 # PropCannonTool
 
+![PropCannonTool][ref-screen]
+
+[![][ref-ws-down]][ref-ws] [![][ref-ws-date]][ref-ws-updt]
+
 ### Description
 The non-working poerted prop cannotn tool that that I fixed and ported to GM13. The original
 author is most likely being [`Lexi`][ref-lexi], but he has stopped the
@@ -39,9 +43,10 @@ is often used by scripted bombs when the fire direction does not correspond to t
   BULLET.CannonVeAlign = 10 -- Overrides the server owner enabled bullet align magnitude
 ```
 
-![PropCannonTool][ref-screen]
-
 [ref-iif]: https://en.wikipedia.org/wiki/If_and_only_if
 [ref-screen]: https://raw.githubusercontent.com/dvdvideo1234/PropCannonTool/master/data/propcannon/tools/pictures/screenshot.jpg
-[ref-ws]: https://steamcommunity.com/sharedfiles/filedetails/?id=286474801
 [ref-lexi]: https://github.com/Lexicality
+[ref-ws-down]: https://img.shields.io/steam/downloads/286474801
+[ref-ws]: https://steamcommunity.com/sharedfiles/filedetails/?id=286474801
+[ref-ws-date]: https://img.shields.io/steam/update-date/286474801
+[ref-ws-updt]: https://steamcommunity.com/sharedfiles/filedetails/changelog/286474801
