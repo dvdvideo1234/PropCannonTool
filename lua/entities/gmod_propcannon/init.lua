@@ -91,7 +91,7 @@ function ENT:Initialize()
   ):WireCreateOutputs(
     {"ReadyToFire", "NORMAL", "Is the cannon ready to fire again"    },
     {"Fired"      , "NORMAL", "Triggered every time the cannon fires"},
-    {"AutoFiring" , "NORMAL", "Is the cannon currently autofiring"   },
+    {"AutoFiring" , "NORMAL", "Is the cannon currently auto-firing"  },
     {"LastBullet" , "ENTITY", "The last prop that was fired"         }
   )
 end
@@ -118,14 +118,14 @@ function ENT:Setup(numpadKeyAF    , numpadKeyFO, fireForce     ,
   self.fireEffect      = tostring(fireEffect or "")
   self.numpadKeyAF     = math.floor(tonumber(numpadKeyAF) or 0)
   self.numpadKeyFO     = math.floor(tonumber(numpadKeyFO) or 0)
-  -- Remove the previosky used numpad keys anf handle numpad crap
+  -- Remove the previously used numpad keys and handle numpad crap
   if(self.numpadID.AF) then numpad.Remove(self.numpadID.AF) end
   if(self.numpadID.FO) then numpad.Remove(self.numpadID.FO) end
   self.numpadID.AF     = numpad.OnDown(ply, self.numpadKeyAF, gsUnit.."_AF", self)
   self.numpadID.FO     = numpad.OnDown(ply, self.numpadKeyFO, gsUnit.."_FO", self)
   self:RemoveCallOnRemove(gsCall)
   self:CallOnRemove(gsCall, self.RemoveNumpad, self.numpadID.AF, self.numpadID.FO)
-  -- Polulate entity data slots wuth the player provided values
+  -- Populate entity data slots with the player provided values
   self.cannonModel     = tostring(cannonModel or self:GetModel())
   self.fireModel       = tostring(fireModel or "")
   self.fireClass       = tostring(fireClass or gsBucs)
@@ -259,7 +259,7 @@ function ENT:BulletTime(ent, delay)
       if(IsValid(ent)) then
         if(self.fireEntity == ent) then
           self:WireWrite("LastBullet") end
-        constraint.RemoveAll(ent) -- Remove contraints
+        constraint.RemoveAll(ent) -- Remove constraints
         ent:SetNoDraw(true)       -- Disable drawing
         ent:SetNotSolid(true)     -- Remove solidness
         ent:SetMoveType(MOVETYPE_NONE) -- Ditch physics
@@ -307,7 +307,7 @@ function ENT:FireOne()
   -- Wiremod values used to store overriding values
   local wfireDelay = self:WireRead("FireDelay", true)
   local wfireClass = self:WireRead("FireClass", true)
-  -- Genral values used for shooting. Overrided by connected wire chips
+  -- General values used for shooting. Overridden by connected wire chips
   local fireDelay = PCannonLib.GetCase(wfireDelay ~= nil and wfireDelay  >  0, wfireDelay , self.fireDelay)
   local fireClass = PCannonLib.GetCase(wfireClass ~= nil and wfireClass ~= "", wfireClass , self.fireClass)
   -- Apply the general shoot trigger logic and bullet configuration
@@ -324,7 +324,7 @@ function ENT:FireOne()
   local wfireExplosives  = self:WireRead("FireExplosives", true)
   local wexplosivePower  = self:WireRead("ExplosivePower", true)
   local wexplosiveRadius = self:WireRead("ExplosiveRadius", true)
-  -- Genral values used for shooting. Overrided by connected wire chips
+  -- General values used for shooting. Overridden by connected wire chips
   local fireMass        = PCannonLib.GetCase(wfireMass        ~= nil and wfireMass        >  0, wfireMass              , self.fireMass)
   local fireModel       = PCannonLib.GetCase(wfireModel       ~= nil and util.IsValidModel(wfireModel),     wfireModel , self.fireModel)
   local killDelay       = PCannonLib.GetCase(wkillDelay       ~= nil and wkillDelay       >  0, wkillDelay             , self.killDelay)
@@ -336,15 +336,15 @@ function ENT:FireOne()
   local explosiveRadius = PCannonLib.GetCase(wexplosiveRadius ~= nil and wexplosiveRadius >= 0, wexplosiveRadius       , self.explosiveRadius)
   -- Apply the general shoot trigger logic and bullet configuration
   local ply = self:GetPlayer() -- For prop protection and ownership addons
-  local eff = self.effectDataClass -- Reference to our own explotion
-  local dir = self:GetFireDirection() -- Bullet fire diection
+  local eff = self.effectDataClass -- Reference to our own explosion
+  local dir = self:GetFireDirection() -- Bullet fire diction
   local pos = self:LocalToWorld(self:OBBCenter())
   if(fireEffect ~= "" and fireEffect ~= "none") then
     local mer = (fireForce / cvFIREFORCE:GetFloat())
     eff:SetScale(mer * cvEFFECTSCL:GetFloat())
     eff:SetOrigin(pos); eff:SetStart(pos)
     util.Effect(fireEffect, eff, true, true)
-  end -- Finish creating effect. Some effect do not use scalling
+  end -- Finish creating effect. Some effect do not use scaling
   self:WireWrite("Fired", 1) -- Indicate that bullet is fired
   self:WireWrite("LastBullet", ent) -- Write last bullet here
   ent.Owner = ply -- For prop protection and ownership addons
@@ -357,16 +357,16 @@ function ENT:FireOne()
   ent:SetSolid(SOLID_VPHYSICS) -- Bullet acts like a physics object
   ent:SetMoveType(MOVETYPE_VPHYSICS) -- Bullet moves like a physics object
   ent:SetNotSolid(false) -- Make sure bullet is a solid prop with collisions
-  ent:SetModel(fireModel) -- This does not work for custom bomps
-  self:BulletAng(ent, dir) -- Use custom angle by populationg axis vector (local)
-  self:BulletPos(ent, pos, dir) -- Positioon the buller OBB. Requites model setup
+  ent:SetModel(fireModel) -- This does not work for custom bombs
+  self:BulletAng(ent, dir) -- Use custom angle by population axis vector (local)
+  self:BulletPos(ent, pos, dir) -- Position the bullet OBB. Requites model setup
   ent:SetOwner(self) -- Used for bullets fired by their owner
   ent:Spawn() -- Spawn the bullet in the world and make sure it is not stuck
   ent:Activate() -- Run bullet think hook when available. Some have it
   ent:SetRenderMode(RENDERMODE_TRANSALPHA) -- Alpha support
   ent:DrawShadow(true) -- Drawn bullet shadow duhh..
   ent:PhysWake() -- Wake physics up for mass and force
-  self:BulletArm(ent) -- Arm the bullet in case of missle or a bomb
+  self:BulletArm(ent) -- Arm the bullet in case of missile or a bomb
   self:BulletAlign(ent) -- Make forward local bullet velocity alignment
   self:BulletTime(ent, killDelay) -- Spawn a timer to deal with kill delay
   self:DeleteOnRemove(ent) -- Remove all bullets when cannon is removed
