@@ -205,12 +205,14 @@ function ENT:Think()
   local wO = self:WireRead("FireOnce", true)
   if(self:CanFire()) then
     self:WireWrite("ReadyToFire", 1)
-    if(wO and wO ~= 0) then self:FireOne() end
-    if(wA) then -- Override by wire input (trigger toggled)
+    if(wA) then -- Override by wire input (trigger impulse)
       if(wA ~= 0) then self.wenable = (not self.wenable) end
       if(self.wenable) then self:FireOne() end
-    else -- Wiremod is not installed use numpad events
-      if(self.enabled) then self:FireOne() end
+    else -- Wire auto-fire is not connected. Fire one prop
+      if(wO and wO ~= 0) then self:FireOne()
+      else -- Wiremod is not installed use numpad events
+        if(self.enabled) then self:FireOne() end
+      end
     end
   else -- Cannon is not ready to fire yet
     self:WireWrite("ReadyToFire", 0)
