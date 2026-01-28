@@ -37,8 +37,8 @@ end
 ]]
 local tOther = {
   Data = {}, -- Hash class lookup
-  "IsPlayer" , "IsVehicle", "IsNPC"   ,
-  "IsRagdoll", "IsWeapon" , "IsWidget"
+  "IsPlayer" , "IsVehicle", "IsNPC"   , "IsNextBot",
+  "IsRagdoll", "IsWeapon" , "IsWidget", "IsWorld"
 }; tOther.Size = #tOther
 
 function PCannonLib.UpdateBlackList(ext, stf)
@@ -128,7 +128,7 @@ function PCannonLib.GetOwner(ent)
   -- Use CPPI first when installed. If fails search down
   user = ((CPPI and ent.CPPIGetOwner) and ent:CPPIGetOwner() or nil)
   if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  -- Try the direct entity methods. Extract owner from functios
+  -- Try the direct entity methods. Extract owner from functions
   user = (ent.GetOwner and ent:GetOwner() or nil)
   if(LaserLib.IsPlayer(user)) then return user else user = nil end
   user = (ent.GetCreator and ent:GetCreator() or nil)
@@ -137,7 +137,7 @@ function PCannonLib.GetOwner(ent)
   user = ent.player; if(LaserLib.IsPlayer(user)) then return user else user = nil end
   user = ent.Owner; if(LaserLib.IsPlayer(user)) then return user else user = nil end
   user = ent.owner; if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  if(set) then -- Duplicatior die functions are registered
+  if(set) then -- Duplicator die functions are registered
     set = set.GetCountUpdate; user = (set.Args and set.Args[1] or nil)
     if(LaserLib.IsPlayer(user)) then return user else user = nil end
     set = set.undo1; user = (set.Args and set.Args[1] or nil)

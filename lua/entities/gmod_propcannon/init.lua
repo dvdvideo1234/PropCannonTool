@@ -361,10 +361,11 @@ function ENT:FireOne()
   self:BulletAng(ent, dir) -- Use custom angle by population axis vector (local)
   self:BulletPos(ent, pos, dir) -- Position the bullet OBB. Requites model setup
   ent:SetOwner(self) -- Used for bullets fired by their owner
+  ent:SetCreator(ply) -- Sets the creator of this entity
   ent:Spawn() -- Spawn the bullet in the world and make sure it is not stuck
   ent:Activate() -- Run bullet think hook when available. Some have it
   ent:SetRenderMode(RENDERMODE_TRANSALPHA) -- Alpha support
-  ent:DrawShadow(true) -- Drawn bullet shadow duhh..
+  ent:DrawShadow(true) -- Drawn bullet shadow duh..
   ent:PhysWake() -- Wake physics up for mass and force
   self:BulletArm(ent) -- Arm the bullet in case of missile or a bomb
   self:BulletAlign(ent) -- Make forward local bullet velocity alignment
@@ -375,10 +376,11 @@ function ENT:FireOne()
   if(fireMass > 0) then uPhys:SetMass(fireMass) end -- Apply bullet mass. Requires valid bullet
   uPhys:SetVelocityInstantaneous(self:GetVelocity()) -- Apply relative velocity
   uPhys:ApplyForceCenter(dir * fireForce) -- Fire it off in front of us
-  if(iPhys and iPhys:IsValid()) then -- Valid cannon physics then continue
-    if(recoilAmount > 0) then -- Try to apply recoil amount to cannon gun physics
-      iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) end -- Recoil amount
-  else self:Remove(); return end -- The cannon could work without a valid physics model
+  if(recoilAmount > 0) then -- Try to apply recoil amount to cannon gun physics
+    if(iPhys and iPhys:IsValid()) then -- Valid cannon physics then continue
+      iPhys:ApplyForceCenter(dir * (-fireForce * recoilAmount)) -- Recoil amount
+    else self:Remove(); return end -- When recoil is enabled remove cannon
+  end -- The cannon could work without a valid physics model
   self:WireWrite("Fired", 0)
   ent.Owner:AddCount("props", ent)
   ent.Owner:AddCleanup("props", ent)
