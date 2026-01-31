@@ -283,24 +283,23 @@ function ENT:BulletAlign(ent)
   local can = tonumber(ent.CannonVeAlign)
   local vam = math.Clamp(can or vag, vmn, vmx)
   if(vam <= 0) then return end -- Override disable
-  local aiv, err, ero = Vector(), Vector(), Vector()
   local aim = self:GetBulletAxis(ent)
   local key = PCannonLib.GetTimerID(ent, "A")
-  timer.Create(key, 0, 0, function()
-    if(ent and ent:IsValid()) then
-      local phy = ent:GetPhysicsObject()
-      if(phy and phy:IsValid()) then
-        local mas, ftm = phy:GetMass(), FrameTime()
-        if(ftm > 0) then -- PD controller to flip bullet
-          local vec = phy:GetVelocity(); vec:Normalize()
-          aiv:Set(aim); aiv:Rotate(ent:GetAngles())
-          err:Set(vec:Cross(aiv)) -- Current error
-          aiv:Set(err); aiv:Sub(ero); aiv:Mul(1 / ftm)
-          aiv:Add(err); aiv:Mul(mas * -vam)
-          phy:ApplyTorqueCenter(aiv); ero:Set(err)
-        end -- No frame time. No force applied
-      else timer.Remove(key) end
-    else timer.Remove(key) end
+  local aiv, err, ero = Vector(), Vector(), Vector()
+  timer.Create(key, 0, 0, function() -- Check entity
+    if(not (ent and ent:IsValid())) then timer.Remove(key); return end
+    local phy = ent:GetPhysicsObject() -- Check physics
+    if(not (phy and phy:IsValid())) then timer.Remove(key); return end
+    if(not phy:IsMotionEnabled()) then timer.Remove(key); return end
+    local ftm = FrameTime() -- No frame change no aligment
+    if(ftm <= 0) then timer.Remove(key); return end
+    local vec = phy:GetVelocity(); vec:Normalize()
+    local mas = phy:GetMass()
+    aiv:Set(aim); aiv:Rotate(ent:GetAngles())
+    err:Set(vec:Cross(aiv)) -- Current error
+    aiv:Set(err); aiv:Sub(ero); aiv:Mul(1 / ftm)
+    aiv:Add(err); aiv:Mul(mas * -vam)
+    phy:ApplyTorqueCenter(aiv); ero:Set(err)
   end)
 end
 
