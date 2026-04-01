@@ -99,6 +99,15 @@ local function Other(ent, rem)
   return true
 end
 
+--[[
+ * Checks whenever an entity is a player
+]]
+function PCannonLib.IsPlayer(arg)
+  if(not (arg and arg:IsValid())) then return false end
+  if(not arg.IsPlayer) then return false end
+  return arg:IsPlayer()
+end
+
 function PCannonLib.IsOther(ent, rem)
   if(not ent) then return true end
   if(not IsValid(ent)) then return true end
@@ -123,26 +132,26 @@ end
  * Uses various entity fields and methods
 ]]
 function PCannonLib.GetOwner(ent)
-  if(not LaserLib.IsValid(ent)) then return nil end
-  local set, user = ent.OnDieFunctions
+  if(not (ent and ent:IsValid())) then return nil end
+  local set, own = ent.OnDieFunctions
   -- Use CPPI first when installed. If fails search down
-  user = ((CPPI and ent.CPPIGetOwner) and ent:CPPIGetOwner() or nil)
-  if(LaserLib.IsPlayer(user)) then return user else user = nil end
+  own = ((CPPI and ent.CPPIGetOwner) and ent:CPPIGetOwner() or nil)
+  if(PCannonLib.IsPlayer(own)) then return own end
   -- Try the direct entity methods. Extract owner from functions
-  user = (ent.GetOwner and ent:GetOwner() or nil)
-  if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  user = (ent.GetCreator and ent:GetCreator() or nil)
-  if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  -- Try then various entity internal key values
-  user = ent.player; if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  user = ent.Owner; if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  user = ent.owner; if(LaserLib.IsPlayer(user)) then return user else user = nil end
+  own = (ent.GetOwner and ent:GetOwner() or nil)
+  if(PCannonLib.IsPlayer(own)) then return own end
+  own = (ent.GetCreator and ent:GetCreator() or nil)
+  if(PCannonLib.IsPlayer(own)) then return own end
+  -- Try various entity internal key values
+  own = ent.player; if(PCannonLib.IsPlayer(own)) then return own end
+  own = ent.Owner; if(PCannonLib.IsPlayer(own)) then return own end
+  own = ent.owner; if(PCannonLib.IsPlayer(own)) then return own end
   if(set) then -- Duplicator die functions are registered
-    set = set.GetCountUpdate; user = (set.Args and set.Args[1] or nil)
-    if(LaserLib.IsPlayer(user)) then return user else user = nil end
-    set = set.undo1; user = (set.Args and set.Args[1] or nil)
-    if(LaserLib.IsPlayer(user)) then return user else user = nil end
-  end; return user -- No owner is found. Nothing is returned
+    set = set.GetCountUpdate; own = (set.Args and set.Args[1] or nil)
+    if(PCannonLib.IsPlayer(own)) then return own end
+    set = set.undo1; own = (set.Args and set.Args[1] or nil)
+    if(PCannonLib.IsPlayer(own)) then return own end
+  end; return nil -- No owner is found. Nothing is returned
 end
 
 -- Send notification to client that something happened
