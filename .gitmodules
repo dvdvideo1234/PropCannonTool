@@ -1,0 +1,3 @@
+[submodule "lua/propcannon/wrapper"]
+	path = lua/propcannon/wrapper
+	url = git@github.com:dvdvideo1234/Wrappers-Gmod.git
