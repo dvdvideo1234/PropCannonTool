@@ -67,7 +67,7 @@ cvars.AddChangeCallback(vanm, function(name, o, n)
 end, vanm); PCannonLib.UpdateBlackList()
 
 --[[
- * Pick direction with the most weigth
+ * Pick direction with the most weight
  * Mainly used to spawn cannon with direction up
 ]]
 local tAngle = {
