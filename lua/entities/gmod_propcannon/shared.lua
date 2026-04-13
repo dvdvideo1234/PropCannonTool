@@ -22,8 +22,8 @@ if(CLIENT) then
   language.Add("gmod_propcannon", ENT.PrintName)
 end
 
-AddCSLuaFile(gsUnit.."/wire_wrapper.lua")
-include(gsUnit.."/wire_wrapper.lua")
+AddCSLuaFile(gsUnit.."/wrapper/wire.lua")
+include(gsUnit.."/wrapper/wire.lua")
 
 if(not file.Exists(gsUnit.."_tool","DATA")) then
   file.CreateDir(gsUnit.."_tool")
